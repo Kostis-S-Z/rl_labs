@@ -50,6 +50,8 @@ start_state = (5, 5)
 state_list = [start_state]
 T = 50
 
+u[(5, 5)] = (0, (5,5))
+
 while len(state_list) != 0 and T != 0:
 
     cur_state = state_list.pop(0)
@@ -60,17 +62,24 @@ while len(state_list) != 0 and T != 0:
     best_action = None
 
     for possible_state in possible_states:
-        if u[possible_state] == -420:
-            reward = rewards[possible_state] + u[possible_state]
+        if u[possible_state] != -420:
+            reward = rewards[possible_state] + u[possible_state][0]
             if reward > max_reward:
                 max_reward = reward
                 best_action = possible_state
 
-    u[cur_state] = (max_reward, best_action)
-
-    for possible_state in possible_states:
-        if u[possible_state] == -420:
-            state_list.append(possible_state)
+    if max_reward != -420:
+        u[cur_state] = (max_reward, best_action)
+        for possible_state in possible_states:
+            if u[possible_state] == -420:
+                state_list.append(possible_state)
 
 #     T -= 1
 print("U:", u)
+
+cur_state = (0, 0)
+path = [cur_state]
+while cur_state != (5, 5):
+    cur_state = u[cur_state][1]
+    path.append(cur_state)
+print('Path: ', path)
