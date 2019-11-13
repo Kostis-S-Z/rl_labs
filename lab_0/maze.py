@@ -39,9 +39,9 @@ for i in range(maze.shape[0]):
 
 print("Actions:", actions)
 
-start_state = (5, 5)
-u[start_state][0][T-1] = 0
-u[start_state][1][T-1] = start_state
+goal_state = (5, 5)
+u[goal_state][0][T - 1] = 0
+u[goal_state][1][T - 1] = goal_state
 
 
 # Define reward space
@@ -49,7 +49,7 @@ rewards = {}
 # To encode the probability of staying in that state, modify the reward as follows
 # state_reward + ( num_of_times_might_be_stuck * probability_of_stuck * state_reward)
 for state in states:
-    if state == start_state:
+    if state == goal_state:
         rewards[state] = 0.0
     # elif state == (5, 0):
     #     rewards[state] = -7*0.5 - 1*0.5
@@ -61,14 +61,14 @@ for state in states:
 #u[start_state] = (0, start_state, T)
 state_list = []
 
-for possible_state in actions[start_state]:
-    if possible_state != start_state:
+for possible_state in actions[goal_state]:
+    if possible_state != goal_state:
         state_list.append((possible_state, T-2))
 
 while len(state_list) != 0:
 
     cur_state, t = state_list.pop(0)
-    if cur_state == start_state:
+    if cur_state == goal_state:
         continue
     print("Current state:", cur_state)
     possible_states = actions[cur_state]

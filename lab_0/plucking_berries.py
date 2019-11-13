@@ -40,9 +40,9 @@ for i in range(maze.shape[0]):
 
 print("Actions:", actions)
 
-start_state = (5, 5)
-u[start_state][0][T-1] = 11
-u[start_state][1][T-1] = start_state
+goal_state = (5, 5)
+u[goal_state][0][T - 1] = 11
+u[goal_state][1][T - 1] = goal_state
 
 
 # Define reward space
@@ -55,14 +55,14 @@ for state in states:
 # u[start_state] = (0, start_state, T)
 state_list = []
 
-for possible_state in actions[start_state]:
-    if possible_state != start_state:
+for possible_state in actions[goal_state]:
+    if possible_state != goal_state:
         state_list.append((possible_state, T-2))
 
 while len(state_list) != 0:
 
     cur_state, t = state_list.pop(0)
-    if cur_state == start_state:
+    if cur_state == goal_state:
         continue
     print("Current state:", cur_state)
     possible_states = actions[cur_state]

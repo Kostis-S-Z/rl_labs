@@ -7,8 +7,16 @@ maze = np.array([
     [1, 1, 0, 1, 1, 0, 1, 1],
     [1, 1, 1, 1, 1, 1, 1, 1],
     [1, 0, 0, 0, 0, 0, 0, 1],
-    [1, 1, 1, 1, 0, 1, 1, 1]
+    [1, 1, 1, 1, 1, 1, 1, 1]
 ])
+
+min_val = np.iinfo(np.int16).min
+
+T = 20
+m_punish = -1000
+start_state = (0, 0)
+goal_state = (6, 7)
+minotaur_state = (0, 5)
 
 
 def build_state_space(with_obstacles=True):
@@ -32,6 +40,7 @@ def build_action_space(states, can_stay=True):
     Define action space
     """
     actions = {}
+    u = {}
     for i in range(maze.shape[0]):
         for j in range(maze.shape[1]):
             key = (i, j)
@@ -49,14 +58,17 @@ def build_action_space(states, can_stay=True):
                 value.append((i - 1, j))
             actions[key] = value
 
-    return actions
+            T_values = np.ones(T) * min_val
+            u[key] = (T_values, [None] * T)
+
+    return actions, u
 
 
-def build_prob_matrix(start_state, T, states, actions):
+def build_prob_matrix(states, actions, init_state):
 
     prob_matrix = np.zeros(shape=(T, maze.shape[0], maze.shape[1]))
 
-    prob_matrix[0][start_state] = 1.0
+    prob_matrix[0][init_state] = 1.0
 
     for t in range(1, T):
         for state in states:
@@ -75,11 +87,67 @@ def build_prob_matrix(start_state, T, states, actions):
 player_state_space = build_state_space(with_obstacles=True)
 minotaur_state_space = build_state_space(with_obstacles=False)  # The minotaur can walk through obstacles
 
-player_actions = build_action_space(player_state_space, can_stay=True)
-minotaur_actions = build_action_space(minotaur_state_space, can_stay=False)  # The minotaur is always on the move
+p_actions, u = build_action_space(player_state_space, can_stay=True)
+m_actions, _ = build_action_space(minotaur_state_space, can_stay=True)  # The minotaur is always on the move
 
-T = 20
-start_state = (5, 5)
 print(minotaur_state_space)
-print(minotaur_actions)
-mat = build_prob_matrix(start_state, T, minotaur_state_space, minotaur_actions)
+print(m_actions)
+
+m_prob = build_prob_matrix(minotaur_state_space, m_actions, minotaur_state)
+
+u[goal_state][0][T-1] = m_prob[T-1][goal_state] * m_punish
+u[goal_state][1][T-1] = goal_state
+
+state_list = []
+
+for possible_state in p_actions[goal_state]:
+    if possible_state != goal_state:
+        state_list.append((possible_state, T-2))
+
+while len(state_list) != 0:
+
+    cur_state, t = state_list.pop(0)
+    if cur_state == goal_state:
+        continue
+    print("Current state:", cur_state)
+    possible_states = p_actions[cur_state]
+
+    max_reward = min_val
+    best_action = None
+
+    for possible_state in possible_states:
+        if u[possible_state][0][t+1] != min_val:
+            m_prob_state_t = m_prob[t+1][possible_state]  # Probability of minotaur being in this state at time t + 1
+            punish = m_prob_state_t * m_punish  # "Reward" if you get caught
+            reward = 0  # (1 - m_prob_state_t) * -1  # Reward if you don't get caught
+            reward = reward + punish + u[possible_state][0][t+1]  # Final reward of state plus future
+            if reward > max_reward:
+                max_reward = reward
+                best_action = possible_state
+
+    if max_reward > u[cur_state][0][t]:
+        u[cur_state][0][t] = max_reward
+        u[cur_state][1][t] = best_action
+        if t > 0:
+            for possible_state in possible_states:
+                state_list.append((possible_state, t-1))
+
+
+print("U:", u)
+
+cur_state = (0, 0)
+path = [cur_state]
+t = np.argmax(u[cur_state][0])
+cur_state = u[cur_state][1][t]
+path.append(cur_state)
+t += 1
+while cur_state != goal_state:
+    cur_state = u[cur_state][1][t]
+    t += 1
+    path.append(cur_state)
+print('Path: ', path)
+
+maze[np.array(path)[:, 0], np.array(path)[:, 1]] = 9
+print(maze)
+
+# print(m_prob[18][goal_state])
