@@ -1,6 +1,5 @@
 import numpy as np
 
-# Define maze grid
 maze = np.array([
     [1, 1, 0, 1, 1, 1, 1],
     [1, 1, 0, 1, 1, 1, 1],
@@ -38,25 +37,29 @@ for i in range(maze.shape[0]):
 
 print("Actions:", actions)
 
+T = 20
+start_state = (5, 5)
+u[(5, 5)] = (0, (5, 5), T)
+
+
 # Define reward space
 rewards = {}
+# To encode the probability of staying in that state, modify the reward as follows
+# state_reward + ( num_of_times_might_be_stuck * probability_of_stuck * state_reward)
 for state in states:
-    if state == (5, 5):
+    if state == start_state:
         rewards[state] = 0.0
     elif state == (5, 0):
         rewards[state] = -7*0.5 - 1*0.5
     elif state == (3, 6):
-        rewards[state] = -2*0.5 -1 *0.5
+        rewards[state] = -2*0.5 - 1*0.5
     else:
         rewards[state] = -1.0
 
-#start_state = (5, 5)
-#state_list = [start_state]
-T = 20
-
-u[(5, 5)] = (0, (5,5), T)
+u[start_state] = (0, start_state, T)
 state_list = []
-for possible_state in actions[(5, 5)]:
+
+for possible_state in actions[start_state]:
     state_list.append(possible_state)
 
 while len(state_list) != 0:
