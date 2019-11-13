@@ -18,7 +18,7 @@ for i in range(maze.shape[0]):
 print("States:", states)
 
 # Define action space
-T = 20
+T = 11
 actions = {}
 u = {}  # Initialize as 0
 for i in range(maze.shape[0]):
@@ -51,10 +51,10 @@ rewards = {}
 for state in states:
     if state == start_state:
         rewards[state] = 0.0
-    elif state == (5, 0):
-        rewards[state] = -7*0.5 - 1*0.5
-    elif state == (3, 6):
-        rewards[state] = -2*0.5 - 1*0.5
+    # elif state == (5, 0):
+    #     rewards[state] = -7*0.5 - 1*0.5
+    # elif state == (3, 6):
+    #     rewards[state] = -2*0.5 - 1*0.5
     else:
         rewards[state] = -1.0
 
@@ -62,7 +62,8 @@ for state in states:
 state_list = []
 
 for possible_state in actions[start_state]:
-    state_list.append((possible_state, T-2))
+    if possible_state != start_state:
+        state_list.append((possible_state, T-2))
 
 while len(state_list) != 0:
 
@@ -93,8 +94,13 @@ print("U:", u)
 
 cur_state = (0, 0)
 path = [cur_state]
+t = np.argmax(u[cur_state][0])
+cur_state = u[cur_state][1][t]
+path.append(cur_state)
+t +=1
 while cur_state != (5, 5):
-    cur_state = u[cur_state][1]
+    cur_state = u[cur_state][1][t]
+    t += 1
     path.append(cur_state)
 print('Path: ', path)
 
