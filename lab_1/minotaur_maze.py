@@ -1,12 +1,13 @@
 import numpy as np
 
 maze = np.array([
-    [1, 1, 1, 1, 1, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 0, 1, 1, 1, 1, 1],
+    [1, 1, 0, 1, 1, 0, 1, 1],
+    [1, 1, 0, 1, 1, 0, 0, 0],
+    [1, 1, 0, 1, 1, 0, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 0, 1, 1, 1]
 ])
 
 
@@ -63,24 +64,19 @@ def build_prob_matrix(start_state, T, states, actions):
             if prob_of_this_state != 0:
 
                 possible_states = np.array(actions[state])
-                print(f"From state {state} you can go to {possible_states}")
 
                 prob_of_each_new_state = prob_of_this_state * (1 / possible_states.shape[0])
 
                 prob_matrix[t][possible_states[:, 0], possible_states[:, 1]] += prob_of_each_new_state
 
-        # print("Probality matrix at T: ", t)
-        # print("Sum of probabilities: ", prob_matrix[t].sum())
-        # print(prob_matrix[t])
-        # exit()
     return prob_matrix
 
 
 player_state_space = build_state_space(with_obstacles=True)
-minotaur_state_space = build_state_space(with_obstacles=False)
+minotaur_state_space = build_state_space(with_obstacles=False)  # The minotaur can walk through obstacles
 
 player_actions = build_action_space(player_state_space, can_stay=True)
-minotaur_actions = build_action_space(minotaur_state_space, can_stay=False)
+minotaur_actions = build_action_space(minotaur_state_space, can_stay=False)  # The minotaur is always on the move
 
 T = 20
 start_state = (5, 5)
