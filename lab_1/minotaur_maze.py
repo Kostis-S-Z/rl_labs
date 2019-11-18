@@ -71,6 +71,9 @@ def build_action_space(states, can_stay=True):
 
 
 def build_prob_matrix(states, actions, init_state):
+    """
+    Create a matrix with the probabilities of the minotaur at each state when he begins from a initial state
+    """
     prob_matrix = np.zeros(shape=(T, maze.shape[0], maze.shape[1]))
 
     prob_matrix[0][init_state] = 1.0
@@ -86,6 +89,50 @@ def build_prob_matrix(states, actions, init_state):
                 prob_matrix[t][possible_states[:, 0], possible_states[:, 1]] += prob_of_each_new_state
 
     return prob_matrix
+
+
+def a_random_walk(actions, init_state):
+    """
+    Generate a random walk of the minotaur in the maze
+    """
+    path_matrix = np.zeros(shape=(T, maze.shape[0], maze.shape[1]))
+
+    path_matrix[0][init_state] = 1.0
+
+    state = init_state
+    for t in range(1, T):
+        possible_states = np.array(actions[state])
+
+        pick_state = np.random.choice(possible_states.shape[0])  # Pick a random state
+        next_state = possible_states[pick_state]
+
+        path_matrix[t][next_state[0], next_state[1]] = 1.0
+        state = tuple(next_state)
+
+    return path_matrix
+
+
+def a_random_walk_hybrid(actions, init_state):
+    """
+    Generate a random walk of the minotaur in the maze
+    """
+    path_matrix = np.zeros(shape=(T, maze.shape[0], maze.shape[1]))
+
+    path_matrix[0][init_state] = 1.0
+
+    state = init_state
+    for t in range(1, T):
+        possible_states = np.array(actions[state])
+
+        n_possible_states = possible_states.shape[0]
+
+        path_matrix[t][possible_states[:, 0], possible_states[:, 1]] = 1.0 / n_possible_states
+
+        pick_state = np.random.choice(possible_states.shape[0])  # Pick a random state
+        next_state = possible_states[pick_state]
+        state = tuple(next_state)
+
+    return path_matrix
 
 
 def find_path():
@@ -131,24 +178,29 @@ def find_path():
     return path
 
 
-test_t = range(1, 20)
-for t in test_t:
-    T = t
-    print("T = ", T)
+# test_t = range(1, 20)
+# for t in test_t:
+#     T = t
+#     print("T = ", T)
 
-    player_state_space = build_state_space(with_obstacles=True)
-    minotaur_state_space = build_state_space(with_obstacles=False)  # The minotaur can walk through obstacles
 
-    p_actions, u = build_action_space(player_state_space, can_stay=True)
-    m_actions, _ = build_action_space(minotaur_state_space, can_stay=True)  # The minotaur is always on the move
+player_state_space = build_state_space(with_obstacles=True)
+minotaur_state_space = build_state_space(with_obstacles=False)  # The minotaur can walk through obstacles
 
-    m_prob = build_prob_matrix(minotaur_state_space, m_actions, minotaur_state)
+p_actions, u = build_action_space(player_state_space, can_stay=True)
+m_actions, _ = build_action_space(minotaur_state_space, can_stay=True)  # The minotaur is always on the move
 
-    path = find_path()
+random_walk_matrix = a_random_walk(m_actions, minotaur_state)
 
-    if path[-1] == goal_state:
-        maze_with_solution = maze.copy()
-        maze_with_solution[np.array(path)[:, 0], np.array(path)[:, 1]] = 9  # Add path to maze
+random_walk_hybrid_matrix = a_random_walk_hybrid(m_actions, minotaur_state)
 
-        print('Path: ', path)
-        print('Solution: \n', maze_with_solution)
+m_prob = build_prob_matrix(minotaur_state_space, m_actions, minotaur_state)
+
+path = find_path()
+
+if path[-1] == goal_state:
+    maze_with_solution = maze.copy()
+    maze_with_solution[np.array(path)[:, 0], np.array(path)[:, 1]] = 9  # Add path to maze
+
+    print('Path: ', path)
+    print('Solution: \n', maze_with_solution)
