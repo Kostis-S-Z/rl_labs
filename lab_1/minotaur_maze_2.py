@@ -236,7 +236,7 @@ for i in range(n_samples):
     for t in range(1, T):
         best_action = u[next_state][1][t-1]
         next_state = (best_action, random_m_path[t])
-        print(f"T: {t} is {next_state}")
+        print(f"Sample: {i}, T: {t} is {next_state}")
         path.append(next_state)
 
     print(path)
@@ -246,7 +246,7 @@ for i in range(n_samples):
         temp_maze[path[t][0]] = 10
         temp_maze[path[t][1]] = 20
         plt.imshow(temp_maze)
-        plt.title(f'Timestep: {t}')
+        plt.title(f'Sample: {i}, Timestep: {t}')
         plt.show()
         if path[t][0] == goal_state:
             break
