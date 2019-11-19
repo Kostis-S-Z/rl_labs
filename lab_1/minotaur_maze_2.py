@@ -19,7 +19,7 @@ maze = np.array([
 
 min_val = np.iinfo(np.int16).min
 
-T = 20
+T = 40
 m_punish = -10000
 player_state = (0, 0)
 goal_state = (6, 5)
@@ -195,7 +195,7 @@ def find_path(minotaur_prob):
                     # Probability of player and minotaur being in the same state
                     p_prob_state_t = next_m_prob[possible_player_state]
                     punish = p_prob_state_t * m_punish  # "Reward" if you get caught
-                    reward = 0#(1 - p_prob_state_t) * -1  # Reward if you don't get caught
+                    reward = (1 - p_prob_state_t) * -1  # Reward if you don't get caught
                     reward = reward + punish + u_t  # Final reward of state plus future
 
                     if reward > max_reward:
@@ -207,7 +207,7 @@ def find_path(minotaur_prob):
                 u[cur_state][1][t] = best_action
                 continue_path = True
         if t > 0 and continue_path:
-            #print(t)
+            print(t)
             for possible_player_state in possible_player_states:
                 state_list.append((possible_player_state, t - 1))
 
@@ -226,28 +226,30 @@ minotaur_prob = build_prob_matrix(minotaur_state_space, m_actions, minotaur_stat
 find_path(minotaur_prob)
 
 starting_state = (player_state, minotaur_state)
-path = [starting_state]
+n_samples = 3
+for i in range(n_samples):
+    path = [starting_state]
 
-_, random_m_path = a_random_walk(m_actions, minotaur_state)
+    _, random_m_path = a_random_walk(m_actions, minotaur_state)
 
-next_state = starting_state
-for t in range(1, T):
-    best_action = u[next_state][1][t-1]
-    next_state = (best_action, random_m_path[t])
-    print(f"T: {t} is {next_state}")
-    path.append(next_state)
+    next_state = starting_state
+    for t in range(1, T):
+        best_action = u[next_state][1][t-1]
+        next_state = (best_action, random_m_path[t])
+        print(f"T: {t} is {next_state}")
+        path.append(next_state)
 
-print(path)
+    print(path)
 
-for t in range(T):
-    temp_maze = maze.copy()
-    temp_maze[path[t][0]] = 10
-    temp_maze[path[t][1]] = 20
-    plt.imshow(temp_maze)
-    plt.title(f'Timestep: {t}')
-    plt.show()
-    if path[t][0] == goal_state:
-        break
+    for t in range(T):
+        temp_maze = maze.copy()
+        temp_maze[path[t][0]] = 10
+        temp_maze[path[t][1]] = 20
+        plt.imshow(temp_maze)
+        plt.title(f'Timestep: {t}')
+        plt.show()
+        if path[t][0] == goal_state:
+            break
 
 # if path[-1] == goal_state:
 #     maze_with_solution = maze.copy()
