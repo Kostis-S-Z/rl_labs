@@ -19,12 +19,15 @@ maze = np.array([
 
 min_val = np.iinfo(np.int16).min
 
-T = 20
-p_reward = -1  # Reward for every move
+np.random.seed(1)
+
+global T
+p_reward = 0  # Reward for every move
 m_punish = -10000
 player_state = (0, 0)
 goal_state = (6, 5)
 minotaur_state = (6, 5)
+starting_state = (player_state, minotaur_state)
 
 
 def build_state_space(with_obstacles=True):
@@ -143,7 +146,7 @@ def a_random_walk_hybrid(actions, init_state):
     return path_matrix
 
 
-def find_path(minotaur_prob):
+def dp_max_prob(u, minotaur_prob):
     # Key is a tuple of:
     #   1) tuple of player state & minotaur state
     #   2) timestep
@@ -196,8 +199,7 @@ def find_path(minotaur_prob):
                     # Probability of player and minotaur being in the same state
                     p_prob_state_t = next_m_prob[possible_player_state]
                     punish = p_prob_state_t * m_punish  # "Reward" if you get caught
-                    # reward = (1 - p_prob_state_t) * p_reward  # Reward if you don't get caught
-                    reward = 0
+                    reward = (1 - p_prob_state_t) * p_reward  # Reward if you don't get caught
                     reward = reward + punish + u_t  # Final reward of state plus future
 
                     if reward > max_reward:
@@ -212,52 +214,90 @@ def find_path(minotaur_prob):
             # print(t)
             for possible_player_state in possible_player_states:
                 state_list.append((possible_player_state, t - 1))
+    return u
 
 
-player_state_space = build_state_space(with_obstacles=True)
-minotaur_state_space = build_state_space(with_obstacles=False)  # The minotaur can walk through obstacles
+def simulate_dp(u):
 
-p_actions, u = build_action_space(player_state_space, can_stay=True)
-m_actions, _ = build_action_space(minotaur_state_space, can_stay=True)  # The minotaur is always on the move
+    survival_count = 0
+    die_count = 0
+    for n in range(n_samples):
+        path = [starting_state]
 
-m_prob = build_prob_matrix(minotaur_state_space, m_actions, minotaur_state, T)
+        _, random_m_path = a_random_walk(m_actions, minotaur_state)
 
-find_path(m_prob)
+        # print(f"Sample: {n}: ")
+        next_state = starting_state
+        for n_t in range(1, T):
+            n_best_action = u[next_state][1][n_t - 1]
+            next_state = (n_best_action, random_m_path[n_t])
+            # print(f"T: {n_t} is {next_state}")
+            path.append(next_state)
 
-starting_state = (player_state, minotaur_state)
+            if next_state[0] == goal_state and next_state[1] != goal_state:
+                survival_count += 1
+                break
+            elif next_state[0] == next_state[1]:
+                die_count += 1
+                break
+
+    return survival_count / n_samples
+
+
+def value_iteration(v):
+    """
+    V = reward
+    """
+    p_mean = 30
+
+    state_list = [starting_state]
+
+
 n_samples = 10000
-survival_count = 0
-for n in range(n_samples):
-    path = [starting_state]
+sim_max_prob_function = []
+max_exp_prob_function = []
+shortest_possible_path = 16
+for test_t in range(1, 50):
+    # If you have less time than the shortest possible path, the probability of reaching it is always 0
+    print(f"T: {test_t}")
+    if test_t < shortest_possible_path:
+        sim_max_prob_function.append(0)
+        max_exp_prob_function.append(0)
+    else:
+        T = test_t
 
-    _, random_m_path = a_random_walk(m_actions, minotaur_state)
+        player_state_space = build_state_space(with_obstacles=True)
+        minotaur_state_space = build_state_space(with_obstacles=False)  # The minotaur can walk through obstacles
 
-    print(f"Sample: {n}: ")
-    next_state = starting_state
-    for n_t in range(1, T):
-        n_best_action = u[next_state][1][n_t-1]
-        next_state = (n_best_action, random_m_path[n_t])
-        # print(f"T: {n_t} is {next_state}")
-        path.append(next_state)
+        p_actions, u_init = build_action_space(player_state_space, can_stay=True)
+        m_actions, _ = build_action_space(minotaur_state_space, can_stay=True)  # The minotaur is always on the move
 
-        if next_state[0] == goal_state and next_state[1] != goal_state:
-            survival_count += 1
-            break
-        elif next_state[0] == next_state[1]:
-            break
+        m_prob = build_prob_matrix(minotaur_state_space, m_actions, minotaur_state, T)
 
-print(survival_count / n_samples)
+        u_final = dp_max_prob(u_init, m_prob)
+        expected_max_prob = 1 - u_final[starting_state][0][0] / m_punish
+        sim_max_prob = simulate_dp(u_final)
 
-print(1 - u[starting_state][0][0] / m_punish)
+        print("Maximum expected probability: ", expected_max_prob)
+        print("Simulated maximum probability: ", sim_max_prob)
 
-    # print(path)
+        sim_max_prob_function.append(sim_max_prob)
+        max_exp_prob_function.append(expected_max_prob)
 
-    # for n_t in range(T):
-    #     temp_maze = maze.copy()
-    #     temp_maze[path[n_t][0]] = 10
-    #     temp_maze[path[n_t][1]] = 20
-    #     plt.imshow(temp_maze)
-    #     plt.title(f'Sample: {n}, Timestep: {n_t}')
-    #     plt.show()
-    #     if path[n_t][0] == goal_state:
-    #         break
+x_axis = range(len(sim_max_prob_function))
+y_axis_sim = sim_max_prob_function
+y_axis_exp = max_exp_prob_function
+plt.plot(x_axis, y_axis_sim)
+plt.show()
+
+# print(path)
+
+# for n_t in range(T):
+#     temp_maze = maze.copy()
+#     temp_maze[path[n_t][0]] = 10
+#     temp_maze[path[n_t][1]] = 20
+#     plt.imshow(temp_maze)
+#     plt.title(f'Sample: {n}, Timestep: {n_t}')
+#     plt.show()
+#     if path[n_t][0] == goal_state:
+#         break
