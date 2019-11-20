@@ -196,7 +196,8 @@ def find_path(minotaur_prob):
                     # Probability of player and minotaur being in the same state
                     p_prob_state_t = next_m_prob[possible_player_state]
                     punish = p_prob_state_t * m_punish  # "Reward" if you get caught
-                    reward = (1 - p_prob_state_t) * p_reward  # Reward if you don't get caught
+                    # reward = (1 - p_prob_state_t) * p_reward  # Reward if you don't get caught
+                    reward = 0
                     reward = reward + punish + u_t  # Final reward of state plus future
 
                     if reward > max_reward:
@@ -208,7 +209,7 @@ def find_path(minotaur_prob):
                 u[cur_state][1][t] = best_action
                 continue_path = True
         if t > 0 and continue_path:
-            print(t)
+            # print(t)
             for possible_player_state in possible_player_states:
                 state_list.append((possible_player_state, t - 1))
 
@@ -217,34 +218,46 @@ player_state_space = build_state_space(with_obstacles=True)
 minotaur_state_space = build_state_space(with_obstacles=False)  # The minotaur can walk through obstacles
 
 p_actions, u = build_action_space(player_state_space, can_stay=True)
-m_actions, _ = build_action_space(minotaur_state_space, can_stay=False)  # The minotaur is always on the move
+m_actions, _ = build_action_space(minotaur_state_space, can_stay=True)  # The minotaur is always on the move
 
 m_prob = build_prob_matrix(minotaur_state_space, m_actions, minotaur_state, T)
 
 find_path(m_prob)
 
 starting_state = (player_state, minotaur_state)
-n_samples = 3
+n_samples = 10000
+survival_count = 0
 for n in range(n_samples):
     path = [starting_state]
 
     _, random_m_path = a_random_walk(m_actions, minotaur_state)
 
+    print(f"Sample: {n}: ")
     next_state = starting_state
     for n_t in range(1, T):
         n_best_action = u[next_state][1][n_t-1]
         next_state = (n_best_action, random_m_path[n_t])
-        print(f"Sample: {n}, T: {n_t} is {next_state}")
+        # print(f"T: {n_t} is {next_state}")
         path.append(next_state)
 
-    print(path)
-
-    for n_t in range(T):
-        temp_maze = maze.copy()
-        temp_maze[path[n_t][0]] = 10
-        temp_maze[path[n_t][1]] = 20
-        plt.imshow(temp_maze)
-        plt.title(f'Sample: {n}, Timestep: {n_t}')
-        plt.show()
-        if path[n_t][0] == goal_state:
+        if next_state[0] == goal_state and next_state[1] != goal_state:
+            survival_count += 1
             break
+        elif next_state[0] == next_state[1]:
+            break
+
+print(survival_count / n_samples)
+
+print(1 - u[starting_state][0][0] / m_punish)
+
+    # print(path)
+
+    # for n_t in range(T):
+    #     temp_maze = maze.copy()
+    #     temp_maze[path[n_t][0]] = 10
+    #     temp_maze[path[n_t][1]] = 20
+    #     plt.imshow(temp_maze)
+    #     plt.title(f'Sample: {n}, Timestep: {n_t}')
+    #     plt.show()
+    #     if path[n_t][0] == goal_state:
+    #         break
