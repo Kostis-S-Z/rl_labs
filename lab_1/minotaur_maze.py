@@ -20,7 +20,8 @@ maze = np.array([
 min_val = np.iinfo(np.int16).min
 
 T = 20
-m_punish = -1000
+p_reward = -1  # Reward for every move
+m_punish = -10000
 player_state = (0, 0)
 goal_state = (6, 5)
 minotaur_state = (6, 5)
@@ -142,79 +143,74 @@ def a_random_walk_hybrid(actions, init_state):
     return path_matrix
 
 
-def find_path():
+def find_path(minotaur_prob):
     # Key is a tuple of:
     #   1) tuple of player state & minotaur state
     #   2) timestep
 
-    start_state = (goal_state, minotaur_state)
-    state_list = [(start_state, T - 1)]
+    state_list = [(goal_state, T-1)]
 
     while len(state_list) != 0:
 
-        cur_state, t = state_list.pop(0)
-        player_cur_state = cur_state[0]
-        minotaur_cur_state = cur_state[1]
+        player_cur_state, t = state_list.pop(0)
 
         possible_player_states = p_actions[player_cur_state]
-        possible_minotaur_states = m_actions[minotaur_cur_state]
 
-        max_reward = min_val
-        best_action = None
+        possible_minotaur_states_list = []
+        for i in range(maze.shape[0]):
+            for j in range(maze.shape[1]):
+                if minotaur_prob[t, i, j] > 0:
+                    possible_minotaur_states_list.append((i, j))
 
-        if player_cur_state == goal_state:
-            max_reward = 0
-            best_action = goal_state
-        else:
-            # Get the probability matrix for the next timestep given the current state of the minotaur
-            next_m_prob = build_prob_matrix(minotaur_state_space, m_actions, minotaur_cur_state, 2)
+        continue_path = False
+        for minotaur_cur_state in possible_minotaur_states_list:
+            # if minotaur_cur_state == player_cur_state:
+            #     print('hi')
+            #     continue
+            cur_state = (player_cur_state, minotaur_cur_state)
+            if player_cur_state == goal_state:
+                max_reward = 0
+                best_action = goal_state
+            else:
+                possible_minotaur_states = m_actions[minotaur_cur_state]
 
-            for possible_player_state in possible_player_states:
-                u_t = 0
-                for possible_minotaur_state in possible_minotaur_states:
-                    # Prob of minotaur being in this state at time t+1
-                    m_prob_state_t = next_m_prob[1][possible_minotaur_state]
+                max_reward = min_val
+                best_action = None
+                # Get the probability matrix for the next timestep given the current state of the minotaur
+                next_m_prob = build_prob_matrix(minotaur_state_space, m_actions, minotaur_cur_state, 2)[1]
+                next_m_prob = np.minimum(minotaur_prob[t+1] * 1e10, 1)*next_m_prob
+                next_m_prob = next_m_prob/np.sum(next_m_prob)
 
-                    possible_state = (possible_player_state, possible_minotaur_state)
-                    u_possible = u[possible_state][0][t + 1]
-
-                    if u_possible != min_val:
-                        u_t += m_prob_state_t * u_possible
-
-                # Probability of player and minotaur being in the same state
-                p_prob_state_t = next_m_prob[1][possible_player_state]
-                punish = p_prob_state_t * m_punish  # "Reward" if you get caught
-                reward = (1 - p_prob_state_t) * -1  # Reward if you don't get caught
-                reward = reward + punish + u_t  # Final reward of state plus future
-
-                if reward > max_reward:
-                    max_reward = reward
-                    best_action = possible_player_state
-
-        if max_reward > u[cur_state][0][t]:
-            u[cur_state][0][t] = max_reward
-            u[cur_state][1][t] = best_action
-            if t > 0:
                 for possible_player_state in possible_player_states:
+                    u_t = 0
                     for possible_minotaur_state in possible_minotaur_states:
-                        # Do not consider the state where the player dies
-                        if possible_player_state != possible_minotaur_state:
+                        if minotaur_prob[t+1][possible_minotaur_state] > 0:
+                            # Prob of minotaur being in this state at time t+1
+                            m_prob_state_t = next_m_prob[possible_minotaur_state]
+
                             possible_state = (possible_player_state, possible_minotaur_state)
-                            state_list.append((possible_state, t - 1))
+                            u_possible = u[possible_state][0][t + 1]
 
-    starting_state = (player_state, minotaur_state)
-    path = [starting_state]
+                            u_t += m_prob_state_t * u_possible
 
-    _, random_m_path = a_random_walk(m_actions, minotaur_state)
+                    # Probability of player and minotaur being in the same state
+                    p_prob_state_t = next_m_prob[possible_player_state]
+                    punish = p_prob_state_t * m_punish  # "Reward" if you get caught
+                    reward = (1 - p_prob_state_t) * p_reward  # Reward if you don't get caught
+                    reward = reward + punish + u_t  # Final reward of state plus future
 
-    next_state = starting_state
-    for t in range(1, T):
-        best_action = u[next_state][1][t]
-        next_state = (best_action, random_m_path[t])
-        print(f"T: {t} is {next_state}")
-        path.append(next_state)
+                    if reward > max_reward:
+                        max_reward = reward
+                        best_action = possible_player_state
 
-    return path
+            if max_reward > u[cur_state][0][t]:
+                u[cur_state][0][t] = max_reward
+                u[cur_state][1][t] = best_action
+                continue_path = True
+        if t > 0 and continue_path:
+            print(t)
+            for possible_player_state in possible_player_states:
+                state_list.append((possible_player_state, t - 1))
 
 
 player_state_space = build_state_space(with_obstacles=True)
@@ -223,18 +219,32 @@ minotaur_state_space = build_state_space(with_obstacles=False)  # The minotaur c
 p_actions, u = build_action_space(player_state_space, can_stay=True)
 m_actions, _ = build_action_space(minotaur_state_space, can_stay=False)  # The minotaur is always on the move
 
+m_prob = build_prob_matrix(minotaur_state_space, m_actions, minotaur_state, T)
 
-# random_walk_hybrid_matrix = a_random_walk_hybrid(m_actions, minotaur_state)
+find_path(m_prob)
 
-# minotaur_prob = build_prob_matrix(minotaur_state_space, m_actions, minotaur_state, T)
+starting_state = (player_state, minotaur_state)
+n_samples = 3
+for n in range(n_samples):
+    path = [starting_state]
 
-path = find_path()
+    _, random_m_path = a_random_walk(m_actions, minotaur_state)
 
-print(path)
+    next_state = starting_state
+    for n_t in range(1, T):
+        n_best_action = u[next_state][1][n_t-1]
+        next_state = (n_best_action, random_m_path[n_t])
+        print(f"Sample: {n}, T: {n_t} is {next_state}")
+        path.append(next_state)
 
-if path[-1] == goal_state:
-    maze_with_solution = maze.copy()
-    maze_with_solution[np.array(path)[:, 0], np.array(path)[:, 1]] = 9  # Add path to maze
+    print(path)
 
-    print('Path: ', path)
-    print('Solution: \n', maze_with_solution)
+    for n_t in range(T):
+        temp_maze = maze.copy()
+        temp_maze[path[n_t][0]] = 10
+        temp_maze[path[n_t][1]] = 20
+        plt.imshow(temp_maze)
+        plt.title(f'Sample: {n}, Timestep: {n_t}')
+        plt.show()
+        if path[n_t][0] == goal_state:
+            break
