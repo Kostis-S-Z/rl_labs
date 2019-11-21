@@ -77,7 +77,7 @@ def build_action_space(states, can_stay=True, init_u_with_time=True):
                         T_values = np.ones(T) * min_val
                         u[p_m_state] = (T_values, [None] * T)
                     else:
-                        u[p_m_state] = (min_val, None)  # Basically V
+                        u[p_m_state] = [min_val, None]  # Basically V
 
     return actions, u
 
