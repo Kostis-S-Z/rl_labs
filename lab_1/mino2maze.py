@@ -18,6 +18,7 @@ maze = np.array([
 ])
 
 min_val = np.iinfo(np.int16).min
+max_val = np.iinfo(np.int16).max
 
 np.random.seed(1)
 
@@ -45,7 +46,7 @@ def build_state_space(with_obstacles=True):
     return states
 
 
-def build_action_space(states, can_stay=True):
+def build_action_space(states, can_stay=True, init_u_with_time=True):
     """
     Define action space
     """
@@ -72,8 +73,11 @@ def build_action_space(states, can_stay=True):
                 for m_j in range(maze.shape[1]):
                     p_m_state = ((i, j), (m_i, m_j))  # Player - Minotaur state
 
-                    T_values = np.ones(T) * min_val
-                    u[p_m_state] = (T_values, [None] * T)
+                    if init_u_with_time:
+                        T_values = np.ones(T) * min_val
+                        u[p_m_state] = (T_values, [None] * T)
+                    else:
+                        u[p_m_state] = (min_val, None)  # Basically V
 
     return actions, u
 
@@ -194,6 +198,76 @@ def find_path(minotaur_prob):
                     u[cur_state][0][t] = max_reward
                     u[cur_state][1][t] = best_action
 
+
+def value_iteration():
+
+    mean = 30
+    gamma = 1 - (1 / mean)
+
+    delta = max_val
+    convergence_condition = 10e-3
+
+    while delta > convergence_condition:
+
+        delta = 0
+        for player_cur_state in player_state_space:
+            for minotaur_cur_state in minotaur_state_space:
+
+                cur_state = (player_cur_state, minotaur_cur_state)
+
+                # If you die or reach terminal state, there is no need to calculate future rewards
+                if player_cur_state == minotaur_cur_state:
+                    max_reward = 0
+                    best_action = player_cur_state
+                elif player_cur_state == goal_state:
+                    max_reward = 1
+                    best_action = goal_state
+                else:
+                    possible_minotaur_states = m_actions[minotaur_cur_state]
+                    possible_player_states = p_actions[player_cur_state]
+
+                    max_reward = min_val
+                    best_action = None
+
+                    # Get the probability matrix for the next timestep given the current state of the minotaur
+                    next_m_prob = build_prob_matrix(minotaur_state_space, m_actions, minotaur_cur_state, 2)[1]
+
+                    # Calculate future rewards
+                    for possible_player_state in possible_player_states:
+                        future_sum = 0
+                        for possible_minotaur_state in possible_minotaur_states:
+                            # Prob of minotaur being in this state at time t+1
+                            m_prob_state_t = next_m_prob[possible_minotaur_state]
+
+                            possible_state = (possible_player_state, possible_minotaur_state)
+                            v_possible = v[possible_state][0]
+                            future_sum += m_prob_state_t * v_possible
+
+                        r_s_a = 0  # reward of not winning and not dying
+                        reward = r_s_a + (gamma * future_sum)
+
+                        if reward > max_reward:
+                            max_reward = reward
+                            best_action = possible_player_state
+
+                prev_v = v[cur_state][0]
+                v[cur_state][0] = max_reward
+                v[cur_state][1] = best_action
+
+                delta += np.square(prev_v - max_reward)
+
+        delta = np.sqrt(delta)
+
+
+player_state_space = build_state_space(with_obstacles=True)
+minotaur_state_space = build_state_space(with_obstacles=False)  # The minotaur can walk through obstacles
+
+p_actions, v = build_action_space(player_state_space, can_stay=True, init_u_with_time=False)
+m_actions, _ = build_action_space(minotaur_state_space, can_stay=True, init_u_with_time=False)
+
+value_iteration()
+
+"""
 player_state_space = build_state_space(with_obstacles=True)
 minotaur_state_space = build_state_space(with_obstacles=False)  # The minotaur can walk through obstacles
 
@@ -220,10 +294,10 @@ for n in range(n_samples):
         # print(f"T: {n_t} is {next_state}")
         path.append(next_state)
 
-        if next_state[0] == goal_state and next_state[1] != goal_state:
-            survival_count += 1
+        if next_state[0] == next_state[1]:
             break
-        elif next_state[0] == next_state[1]:
+        elif next_state[0] == goal_state:
+            survival_count += 1
             break
 
 print(survival_count / n_samples)
@@ -241,3 +315,5 @@ print(u[starting_state][0][0])
     #     plt.show()
     #     if path[n_t][0] == goal_state:
     #         break
+
+"""
