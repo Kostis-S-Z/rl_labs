@@ -456,23 +456,48 @@ def run_vi():
 
             if next_state[0] == next_state[1]:
                 minotaur_deaths += 1
+                outcome = 0
                 break
             elif next_state[0] == goal_state:
                 survival_count += 1
+                outcome = 1
                 break
         else:
             time_deaths += 1
+            outcome = 2
 
-        # TODO: add for every time step, the outcome of the simulation
         if time in results:
-            results[time].append
+            results[time].append(outcome)
         else:
-            results[time] = []
+            results[time] = [outcome]
 
     print(f"Win ratio: {survival_count / n_samples}")
     print(f"Survival count: {survival_count}")
     print(f"Minotaur deaths: {minotaur_deaths}")
     print(f"Time-out deaths: {time_deaths}")
+
+    res_per_t = {}
+
+    for key, value in results.items():
+        # Count each type of outcome
+        mino_deaths_of_t = value.count(0)
+        survival_of_t = value.count(1)
+        time_deaths_of_t = value.count(2)
+
+        # All samples for a specific T
+        n_samples_of_t = mino_deaths_of_t + survival_of_t + time_deaths_of_t
+
+        # Percentage of each outcome for specific T
+        res_per_t[key] = {"m": mino_deaths_of_t / n_samples_of_t,
+                          "s": survival_of_t / n_samples_of_t,
+                          "t": time_deaths_of_t / n_samples_of_t}
+
+        if 10 < key < 30:
+            plt.scatter(key, res_per_t[key]["m"], c='red')
+            plt.scatter(key, res_per_t[key]["s"], c='blue')
+            plt.scatter(key, res_per_t[key]["t"], c='green')
+
+    plt.show()
 
 
 run_vi()
