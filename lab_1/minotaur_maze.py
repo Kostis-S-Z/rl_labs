@@ -492,10 +492,13 @@ def run_vi():
                           "s": survival_of_t / n_samples_of_t,
                           "t": time_deaths_of_t / n_samples_of_t}
 
-        if 10 < key < 30:
+        if 10 < key < 50:
             plt.scatter(key, res_per_t[key]["m"], c='red')
             plt.scatter(key, res_per_t[key]["s"], c='blue')
             plt.scatter(key, res_per_t[key]["t"], c='green')
+            # plt.axvline(x=key, ymax=res_per_t[key]["m"], c='red')
+            # plt.axvline(x=key, ymax=res_per_t[key]["s"], c='blue')
+            # plt.axvline(x=key, ymax=res_per_t[key]["t"], c='green')
 
     plt.show()
 
