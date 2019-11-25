@@ -25,6 +25,7 @@ reward_map[bank] = 1
 
 # Parameter values
 iterations = 10000
+epsilon = 0.1
 discount_factor = 0.8
 
 
@@ -73,21 +74,24 @@ def reward_function(r_state, p_state):
 
 
 def q_learning():
+    count_a = np.zeros(shape=n_actions)
     q_values = np.zeros(shape=n_actions)
 
     for i in range(iterations):
-        pass
+
+        action = e_greedy(q_values)
+        count_a[action] += 1
 
 
 def sarsa():
     pass
 
 
-def e_greedy(epsilon, q, step):
-    if np.random.rand() > epsilon:
+def e_greedy(q):
+    if np.random.rand() > epsilon:  # With probability random > 0.1, choose optimal action
         return np.argmax(q)
     else:
-        return np.random.randint(len(q))
+        return np.random.randint(n_actions)  # Otherwise, choose randomly
 
 
 s_space = build_state_space()
