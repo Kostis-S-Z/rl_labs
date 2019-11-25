@@ -24,7 +24,7 @@ reward_map = np.array([
 reward_map[bank] = 1
 
 # Parameter values
-iterations = 10000000
+iterations = 10000000  # 10.000.000 = 10000000
 epsilon = 0.1
 d_factor = 0.8
 
@@ -83,7 +83,7 @@ def reward_function(r_state, p_state):
 
 
 def choose_random_action(action_space, state):
-    action = np.random.choice(len(action_space[state]))
+    action = np.random.randint(len(action_space[state]))
     return action_space[state][action]
 
 
@@ -91,11 +91,15 @@ def q_learning(states, action_space):
 
     robber_state = init_robber
     police_state = init_police
-    s_t = (robber_state, police_state)
+    init_state = (robber_state, police_state)
 
     q = init_q(states, action_space)
     lr = init_q(states, action_space)
 
+    # q_init_evolution = {"stay": [0], "up": [0], "down": [0], "left": [0], "right": [0]}
+    q_init_evolution = {"stay": [0], "down": [0], "right": [0]}
+
+    s_t = init_state
     for i in range(iterations):
 
         # Choose random action out of legal actions
@@ -119,27 +123,86 @@ def q_learning(states, action_space):
         police_state = next_police_state
         s_t = (robber_state, police_state)
 
+        q_init_evolution["stay"].append(q[init_state]["stay"])
+        q_init_evolution["down"].append(q[init_state]["down"])
+        q_init_evolution["right"].append(q[init_state]["right"])
+        if i % 1000 == 0:
+            print(f"Iteration: {i} Q{s_t}: {q[s_t]}")
+
+    plot_q(q_init_evolution)
+
+
+def plot_q(q_evolution):
+    x_axis = range(len(q_evolution["stay"]))
+    y_axis_stay = q_evolution["stay"]
+    y_axis_down = q_evolution["down"]
+    y_axis_right = q_evolution["right"]
+    plt.plot(x_axis, y_axis_stay, label="stay")
+    plt.plot(x_axis, y_axis_down, label="down")
+    plt.plot(x_axis, y_axis_right, label="right")
+    plt.legend()
+    plt.show()
+    plt.savefig("q_evolution.png")
+
+
+def sarsa(states, action_space):
+
+    robber_state = init_robber
+    police_state = init_police
+    init_state = (robber_state, police_state)
+
+    q = init_q(states, action_space)
+    lr = init_q(states, action_space)
+
+    # q_init_evolution = {"stay": [0], "up": [0], "down": [0], "left": [0], "right": [0]}
+    q_init_evolution = {"stay": [0], "down": [0], "right": [0]}
+
+    s_t = init_state
+    for i in range(iterations):
+
+        # Choose random action out of legal actions
+        next_robber_state, robber_action = choose_random_action(action_space, robber_state)
+        next_police_state, police_action = choose_random_action(action_space, police_state)
+
+        s_t_1 = (next_robber_state, next_police_state)
+
+        # Calculate reward
+        r = reward_function(next_robber_state, next_police_state)
+
+        # Find appropriate learning rate (alpha) based on current state and action
+        lr[s_t][robber_action] += 1
+        alpha = 1 / (lr[s_t][robber_action] ** (2/3))
+
+        # Select new action
+        new_robber_action = choose_random_action(action_space, next_robber_state)
+
+        # Update Q values
+        q[s_t][robber_action] += alpha * (r + d_factor * np.max(list(q[s_t_1].values())) - q[s_t][robber_action])
+
+        # Move to next state
+        robber_state = next_robber_state
+        police_state = next_police_state
+        s_t = (robber_state, police_state)
+
+        q_init_evolution["stay"].append(q[init_state]["stay"])
+        q_init_evolution["down"].append(q[init_state]["down"])
+        q_init_evolution["right"].append(q[init_state]["right"])
         if i % 1000 == 0:
             print(f"Iteration: {i} Q{s_t}: {q[s_t]}")
 
 
-def sarsa(states):
-    action_count = np.zeros(shape=n_actions)
-    q = init_q(states)
-
-    action = e_greedy(q)
-    action_count[action] += 1
-
-
-def e_greedy(q):
+def e_greedy(q_t, action_space):
     if np.random.rand() > epsilon:  # With probability random > 0.1, choose optimal action
-        return np.argmax(q)
+        i_action = np.argmax(list(q_t.values()))
     else:
-        return np.random.randint(n_actions)  # Otherwise, choose randomly
+        i_action = np.random.randint(len(q_t))  # Otherwise, choose randomly
 
+    return action_space
 
 s_space = build_state_space()
 a_space = build_action_space(s_space)
+
+# TODO: remove stay from police
 
 # We assume we choose only from LEGAL actions
 q_learning(s_space, a_space)
