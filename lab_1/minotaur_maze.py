@@ -309,7 +309,7 @@ def simulate_dp_runs(m_actions, u, time):
 def run_dp():
 
     use_better = False
-    test_time = 50
+    test_time = 40
 
     pss = build_state_space(with_obstacles=True)
     mss = build_state_space(with_obstacles=False)  # The minotaur can walk through obstacles
@@ -348,8 +348,8 @@ def run_dp():
     x_axis = range(len(sim_max_prob_function))
     y_axis_sim = sim_max_prob_function
     y_axis_exp = max_exp_prob_function
-    plt.plot(x_axis, y_axis_sim)
-    plt.plot(x_axis, y_axis_exp)
+    plt.plot(x_axis, y_axis_sim, label="Simulated")
+    plt.plot(x_axis, y_axis_exp, label="Analytical")
     plt.show()
 
 
@@ -503,4 +503,22 @@ def run_vi():
     plt.show()
 
 
-run_vi()
+def plot_m_evolution():
+    time = 20
+    can_stay = True
+    title = "can_stay" if can_stay else "no_stay"
+
+    mss = build_state_space(with_obstacles=False)  # The minotaur can walk through obstacles
+    m_a, _ = build_action_space(mss, timesteps=time, can_stay=can_stay)
+    m_prob = build_prob_matrix(mss, m_a, minotaur_state, time)
+
+    for i in range(time):
+        plt.imshow(m_prob[i])
+        plt.axis('off')
+        plt.colorbar()
+        plt.savefig(f"figures/{title}_{i}.png")
+        plt.show()
+
+
+# run_dp()
+# run_vi()
