@@ -441,7 +441,7 @@ def run_vi():
 
         path = [starting_state]
 
-        time = np.random.geometric(1 / lifespan)
+        time = np.random.geometric(1 / lifespan) + 1
 
         _, random_m_path = a_random_walk(m_a, minotaur_state, time)
 
