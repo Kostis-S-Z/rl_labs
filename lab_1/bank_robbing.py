@@ -24,8 +24,7 @@ reward_map = np.array([
 reward_map[bank] = 1
 
 # Parameter values
-iterations = 10000000  # 10.000.000 = 10000000
-epsilon = 0.1
+iterations = 5000000  # 10.000.000 = 10000000
 d_factor = 0.8
 
 
@@ -41,7 +40,7 @@ def build_state_space():
     return states
 
 
-def build_action_space(states):
+def build_action_space(states, can_stay=True):
     """
     Define action space
     """
@@ -49,7 +48,11 @@ def build_action_space(states):
     for i in range(reward_map.shape[0]):
         for j in range(reward_map.shape[1]):
             key = (i, j)
-            value = [((i, j), "stay")]
+
+            if can_stay:
+                value = [((i, j), "stay")]
+            else:
+                value = []
 
             if (i, j - 1) in states:
                 value.append(((i, j - 1), "left"))
@@ -83,18 +86,18 @@ def reward_function(r_state, p_state):
 
 
 def choose_random_action(action_space, state):
-    action = np.random.randint(len(action_space[state]))
-    return action_space[state][action]
+    i_action = np.random.randint(len(action_space[state]))
+    return action_space[state][i_action]
 
 
-def q_learning(states, action_space):
+def q_learning(states, action_space_robber, action_space_police):
 
     robber_state = init_robber
     police_state = init_police
     init_state = (robber_state, police_state)
 
-    q = init_q(states, action_space)
-    lr = init_q(states, action_space)
+    q = init_q(states, action_space_robber)
+    lr = init_q(states, action_space_robber)
 
     # q_init_evolution = {"stay": [0], "up": [0], "down": [0], "left": [0], "right": [0]}
     q_init_evolution = {"stay": [0], "down": [0], "right": [0]}
@@ -103,8 +106,8 @@ def q_learning(states, action_space):
     for i in range(iterations):
 
         # Choose random action out of legal actions
-        next_robber_state, robber_action = choose_random_action(action_space, robber_state)
-        next_police_state, police_action = choose_random_action(action_space, police_state)
+        next_robber_state, robber_action = choose_random_action(action_space_robber, robber_state)
+        next_police_state, police_action = choose_random_action(action_space_police, police_state)
 
         s_t_1 = (next_robber_state, next_police_state)
 
@@ -132,7 +135,7 @@ def q_learning(states, action_space):
     plot_q(q_init_evolution)
 
 
-def plot_q(q_evolution):
+def plot_q(q_evolution, title="q_evolution"):
     x_axis = range(len(q_evolution["stay"]))
     y_axis_stay = q_evolution["stay"]
     y_axis_down = q_evolution["down"]
@@ -142,17 +145,26 @@ def plot_q(q_evolution):
     plt.plot(x_axis, y_axis_right, label="right")
     plt.legend()
     plt.show()
-    plt.savefig("q_evolution.png")
+    plt.savefig(title + ".png")
 
 
-def sarsa(states, action_space):
+def e_greedy(epsilon, robber_state, possible_action_values, action_space):
+    if np.random.rand() > epsilon:  # With probability random > 0.1, choose optimal action
+        i_action = np.argmax(possible_action_values)
+    else:
+        i_action = np.random.randint(len(possible_action_values))  # Otherwise, choose randomly
+
+    return action_space[robber_state][i_action]
+
+
+def sarsa(states, action_space_robber, action_space_police, epsilon=0.1):
 
     robber_state = init_robber
     police_state = init_police
     init_state = (robber_state, police_state)
 
-    q = init_q(states, action_space)
-    lr = init_q(states, action_space)
+    q = init_q(states, action_space_robber)
+    lr = init_q(states, action_space_robber)
 
     # q_init_evolution = {"stay": [0], "up": [0], "down": [0], "left": [0], "right": [0]}
     q_init_evolution = {"stay": [0], "down": [0], "right": [0]}
@@ -160,9 +172,11 @@ def sarsa(states, action_space):
     s_t = init_state
     for i in range(iterations):
 
-        # Choose random action out of legal actions
-        next_robber_state, robber_action = choose_random_action(action_space, robber_state)
-        next_police_state, police_action = choose_random_action(action_space, police_state)
+        # Choose random action for police
+        next_police_state, police_action = choose_random_action(action_space_police, police_state)
+        # Choose action for robber based on epsilon greedy
+        possible_action_values = list(q[s_t].values())
+        next_robber_state, robber_action = e_greedy(epsilon, robber_state, possible_action_values, action_space_robber)
 
         s_t_1 = (next_robber_state, next_police_state)
 
@@ -174,10 +188,11 @@ def sarsa(states, action_space):
         alpha = 1 / (lr[s_t][robber_action] ** (2/3))
 
         # Select new action
-        new_robber_action = choose_random_action(action_space, next_robber_state)
+        possible_next_action_values = list(q[s_t_1].values())
+        _, next_robber_action = e_greedy(epsilon, next_robber_state, possible_next_action_values, action_space_robber)
 
         # Update Q values
-        q[s_t][robber_action] += alpha * (r + d_factor * np.max(list(q[s_t_1].values())) - q[s_t][robber_action])
+        q[s_t][robber_action] += alpha * (r + d_factor * q[s_t_1][next_robber_action] - q[s_t][robber_action])
 
         # Move to next state
         robber_state = next_robber_state
@@ -190,19 +205,18 @@ def sarsa(states, action_space):
         if i % 1000 == 0:
             print(f"Iteration: {i} Q{s_t}: {q[s_t]}")
 
+    plot_q(q_init_evolution, title="q_evolution_" + str(epsilon))
 
-def e_greedy(q_t, action_space):
-    if np.random.rand() > epsilon:  # With probability random > 0.1, choose optimal action
-        i_action = np.argmax(list(q_t.values()))
-    else:
-        i_action = np.random.randint(len(q_t))  # Otherwise, choose randomly
-
-    return action_space
 
 s_space = build_state_space()
 a_space = build_action_space(s_space)
+p_a_space = build_action_space(s_space, can_stay=False)
 
-# TODO: remove stay from police
 
 # We assume we choose only from LEGAL actions
-q_learning(s_space, a_space)
+# q_learning(s_space, a_space, p_a_space)
+sarsa(s_space, a_space, p_a_space)
+
+e_values = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+for e in e_values:
+    sarsa(s_space, a_space, p_a_space, epsilon=e)
