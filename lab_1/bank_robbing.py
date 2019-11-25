@@ -11,9 +11,9 @@ min_val = np.iinfo(np.int16).min
 max_val = np.iinfo(np.int16).max
 n_actions = len(["stay", "up", "down", "right", "left"])
 
-bank = (1, 1)
 robber = (0, 0)
 police = (3, 3)
+bank = (1, 1)
 
 reward_map = np.array([
     [0, 0, 0, 0],
@@ -74,13 +74,13 @@ def reward_function(r_state, p_state):
 
 
 def q_learning():
-    count_a = np.zeros(shape=n_actions)
+    action_count = np.zeros(shape=n_actions)
     q_values = np.zeros(shape=n_actions)
 
     for i in range(iterations):
 
         action = e_greedy(q_values)
-        count_a[action] += 1
+        action_count[action] += 1
 
 
 def sarsa():
