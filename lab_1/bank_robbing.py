@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import time
+from decimal import Decimal
 
 """
 Problem 3: Bank Robbing
@@ -24,7 +26,7 @@ reward_map = np.array([
 reward_map[bank] = 1
 
 # Parameter values
-iterations = 5000000  # 10.000.000 = 10000000
+iterations = 10000000  # 10.000.000 = 10000000
 d_factor = 0.8
 
 
@@ -90,7 +92,7 @@ def choose_random_action(action_space, state):
     return action_space[state][i_action]
 
 
-def q_learning(states, action_space_robber, action_space_police):
+def q_learning(states, action_space_robber, action_space_police, verbose=False):
 
     robber_state = init_robber
     police_state = init_police
@@ -103,6 +105,7 @@ def q_learning(states, action_space_robber, action_space_police):
     q_init_evolution = {"stay": [0], "down": [0], "right": [0]}
 
     s_t = init_state
+
     for i in range(iterations):
 
         # Choose random action out of legal actions
@@ -129,7 +132,7 @@ def q_learning(states, action_space_robber, action_space_police):
         q_init_evolution["stay"].append(q[init_state]["stay"])
         q_init_evolution["down"].append(q[init_state]["down"])
         q_init_evolution["right"].append(q[init_state]["right"])
-        if i % 1000 == 0:
+        if verbose and i % 100000 == 0:
             print(f"Iteration: {i} Q{s_t}: {q[s_t]}")
 
     plot_q(q_init_evolution)
@@ -157,7 +160,7 @@ def e_greedy(epsilon, robber_state, possible_action_values, action_space):
     return action_space[robber_state][i_action]
 
 
-def sarsa(states, action_space_robber, action_space_police, epsilon=0.1):
+def sarsa(states, action_space_robber, action_space_police, epsilon=0.1, verbose=False):
 
     robber_state = init_robber
     police_state = init_police
@@ -170,6 +173,9 @@ def sarsa(states, action_space_robber, action_space_police, epsilon=0.1):
     q_init_evolution = {"stay": [0], "down": [0], "right": [0]}
 
     s_t = init_state
+
+    start = time.time()
+
     for i in range(iterations):
 
         # Choose random action for police
@@ -202,8 +208,12 @@ def sarsa(states, action_space_robber, action_space_police, epsilon=0.1):
         q_init_evolution["stay"].append(q[init_state]["stay"])
         q_init_evolution["down"].append(q[init_state]["down"])
         q_init_evolution["right"].append(q[init_state]["right"])
-        if i % 1000 == 0:
-            print(f"Iteration: {i} Q{s_t}: {q[s_t]}")
+        if verbose and i % 100000 == 0:
+            end = time.time()
+            elapsed = end - start
+            elapsed = round(Decimal(elapsed), 2)
+            print(f"Iteration: {i} ({elapsed}sec) | Q{s_t}: {q[s_t]}")
+            start = time.time()
 
     plot_q(q_init_evolution, title="q_evolution_" + str(epsilon))
 
