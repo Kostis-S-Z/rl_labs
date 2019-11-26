@@ -1,5 +1,5 @@
 # Reinforcement Learning Labs
-_Labs implementations of the course EL2805 Reinforcement Learning 2019, KTH_
+_Labs implementations of the course
 
 ## Lab 0
 
