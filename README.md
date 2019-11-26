@@ -1,5 +1,4 @@
 # Reinforcement Learning Labs
-_Labs implementations of the course
 
 ## Lab 0
 
