@@ -224,8 +224,8 @@ p_a_space = build_action_space(s_space, can_stay=False)
 
 
 # We assume we choose only from LEGAL actions
-# q_learning(s_space, a_space, p_a_space)
-sarsa(s_space, a_space, p_a_space)
+# q_learning(s_space, a_space, p_a_space, verbose=True)
+sarsa(s_space, a_space, p_a_space, verbose=True)
 
 e_values = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
 for e in e_values:

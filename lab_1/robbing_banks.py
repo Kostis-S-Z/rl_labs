@@ -46,7 +46,7 @@ def build_action_space(states, can_stay=True):
     Define action space
     """
     actions = {}
-    u = {}
+    v = {}
     for i in range(city.shape[0]):
         for j in range(city.shape[1]):
             key = (i, j)
@@ -54,42 +54,56 @@ def build_action_space(states, can_stay=True):
                 value = [(i, j)]
             else:
                 value = []
-            if (i, j - 1) in states:
+            if (i, j - 1) in states:  # left
                 value.append((i, j - 1))
-            if (i, j + 1) in states:
+            if (i, j + 1) in states:  # right
                 value.append((i, j + 1))
-            if (i + 1, j) in states:
+            if (i + 1, j) in states:  # down
                 value.append((i + 1, j))
-            if (i - 1, j) in states:
+            if (i - 1, j) in states:  # up
                 value.append((i - 1, j))
             actions[key] = value
 
-            for m_i in range(city.shape[0]):
-                for m_j in range(city.shape[1]):
-                    p_m_state = ((i, j), (m_i, m_j))  # Player - Minotaur state
+            for p_i in range(city.shape[0]):
+                for p_j in range(city.shape[1]):
+                    r_p_state = ((i, j), (p_i, p_j))  # Robber - Police state
 
-                    u[p_m_state] = [0, None]  # Initialize V with zeros
+                    v[r_p_state] = [0, None]  # Initialize V with zeros
 
-    return actions, u
+    return actions, v
 
 
-def build_prob_matrix(states, actions, init_state, timesteps):
+def next_police_move(police_state, robber_state, p_actions):
     """
     Create a matrix with the probabilities of the minotaur at each state when he begins from a initial state
     """
-    prob_matrix = np.zeros(shape=(timesteps, city.shape[0], city.shape[1]))
+    prob_matrix = np.zeros(shape=(city.shape[0], city.shape[1]))
 
-    prob_matrix[0][init_state] = 1.0
+    # 0: left, 1: right, 2: down, 3: up
+    possible_states = p_actions[police_state]
+    possible_states_indices = np.array(possible_states)
 
-    for t in range(1, timesteps):
-        for state in states:
-            prob_of_this_state = prob_matrix[t - 1][state]
-            if prob_of_this_state != 0:
-                possible_states = np.array(actions[state])
+    prob_matrix[possible_states_indices[:, 0], possible_states_indices[:, 1]] = 1
 
-                prob_of_each_new_state = prob_of_this_state * (1 / possible_states.shape[0])
+    if robber_state[1] > police_state[1]:  # Robber is on the right
+        left_state = (police_state[0], police_state[1] - 1)
+        if left_state in possible_states:
+            prob_matrix[left_state] = 0
+    elif robber_state[1] < police_state[1]:  # Robber is on the left
+        right_state = (police_state[0], police_state[1] + 1)
+        if right_state in possible_states:
+            prob_matrix[right_state] = 0
 
-                prob_matrix[t][possible_states[:, 0], possible_states[:, 1]] += prob_of_each_new_state
+    if robber_state[0] > police_state[0]:  # Robber is below
+        above_state = (police_state[0] - 1, police_state[1])
+        if above_state in possible_states:
+            prob_matrix[above_state] = 0
+    elif robber_state[0] < police_state[0]:  # Robber is above
+        below_state = (police_state[0] + 1, police_state[1])
+        if below_state in possible_states:
+            prob_matrix[below_state] = 0
+
+    prob_matrix = prob_matrix / np.sum(prob_matrix)
 
     return prob_matrix
 
@@ -102,3 +116,75 @@ def reward_function(r_state, p_state):
     else:  # Otherwise
         return 0
 
+
+def value_iteration(r_states, p_states, r_actions, p_actions, v):
+
+    iterations = 0
+    delta = max_val
+    convergence_condition = 10e-3
+
+    while delta > convergence_condition:
+
+        delta = 0
+        for robber_state in r_states:
+            for police_state in p_states:
+
+                cur_state = (robber_state, police_state)
+
+                if robber_state == police_state:
+                    possible_robber_states = [init_robber]
+                    possible_police_states = [init_police]
+                else:
+                    possible_robber_states = r_actions[robber_state]
+                    possible_police_states = p_actions[police_state]
+
+                max_reward = min_val
+                next_state = None
+
+                # Probability matrix of the next moves of the police
+                next_police_prob = next_police_move(police_state, robber_state, p_actions)
+
+                # Calculate future rewards
+                for possible_robber_state in possible_robber_states:
+                    next_reward = 0
+                    future_sum = 0
+                    for possible_police_state in possible_police_states:
+                        police_next_prob = next_police_prob[possible_robber_state]
+
+                        possible_state = (possible_robber_state, possible_police_state)
+                        v_possible = v[possible_state][0]
+
+                        next_reward += police_next_prob * reward_function(possible_robber_state, possible_police_state)
+                        future_sum += police_next_prob * v_possible
+
+                    reward = next_reward + (gamma * future_sum)
+
+                    if reward > max_reward:
+                        max_reward = reward
+                        next_state = possible_robber_state
+
+                prev_v = v[cur_state][0]
+                v[cur_state][0] = max_reward
+                v[cur_state][1] = next_state
+
+                delta += np.square(prev_v - max_reward)
+
+        iterations += 1
+        delta = np.sqrt(delta)
+
+        # if iterations % 100 == 0:
+        print(f"I:{iterations} | Delta: {delta}")
+
+    return v, iterations
+
+
+state_space = build_state_space()
+robber_actions, v_val = build_action_space(state_space)
+police_actions, _ = build_action_space(state_space, can_stay=False)
+
+gamma = 0.8
+v_val, i_s = value_iteration(state_space, state_space, robber_actions, police_actions, v_val)
+
+v_init_state = v_val[(init_robber, init_police)]
+
+print(f"VI converged with lambda = {gamma} after {i_s} iterations.")
