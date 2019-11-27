@@ -188,11 +188,10 @@ police_actions, _ = build_action_space(state_space, can_stay=False)
 gammas = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 
 for gamma in gammas:
-    _, v_evolution, i_s = value_iteration(state_space, state_space, robber_actions, police_actions, v_val)
-    plt.plot(range(len(v_evolution)), v_evolution, label='gamma=' + str(gamma))
+    v, _, i_s = value_iteration(state_space, state_space, robber_actions, police_actions, v_val)
+    plt.scatter(gamma, v[(init_robber, init_police)][0])
     print(f"VI converged with lambda = {gamma} after {i_s} iterations.")
 
-plt.legend()
 plt.show()
 plt.savefig("v_gamma.png")
 
