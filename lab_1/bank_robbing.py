@@ -103,6 +103,7 @@ def q_learning(states, action_space_robber, action_space_police, verbose=False):
 
     # q_init_evolution = {"stay": [0], "up": [0], "down": [0], "left": [0], "right": [0]}
     q_init_evolution = {"stay": [0], "down": [0], "right": [0]}
+    q_max_evolution = []
 
     s_t = init_state
 
@@ -129,6 +130,7 @@ def q_learning(states, action_space_robber, action_space_police, verbose=False):
         police_state = next_police_state
         s_t = (robber_state, police_state)
 
+        q_max_evolution.append(np.max(list(q[init_state].values())))
         q_init_evolution["stay"].append(q[init_state]["stay"])
         q_init_evolution["down"].append(q[init_state]["down"])
         q_init_evolution["right"].append(q[init_state]["right"])
@@ -136,6 +138,7 @@ def q_learning(states, action_space_robber, action_space_police, verbose=False):
             print(f"Iteration: {i} Q{s_t}: {q[s_t]}")
 
     plot_q(q_init_evolution)
+    plot_v(q_max_evolution)
 
 
 def plot_q(q_evolution, title="q_evolution"):
@@ -235,11 +238,10 @@ s_space = build_state_space()
 a_space = build_action_space(s_space)
 p_a_space = build_action_space(s_space, can_stay=False)
 
-
 # We assume we choose only from LEGAL actions
-# q_learning(s_space, a_space, p_a_space, verbose=True)
-# sarsa(s_space, a_space, p_a_space, verbose=True)
+q_learning(s_space, a_space, p_a_space, verbose=True)
 
+# 0.01, 0.05, 0.1
 e_values = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
 for e in e_values:
     v_evolution = sarsa(s_space, a_space, p_a_space, verbose=True, epsilon=e)
