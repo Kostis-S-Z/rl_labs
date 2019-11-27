@@ -306,9 +306,8 @@ def simulate_dp_runs(m_actions, u, time):
     return survival_count / n_samples
 
 
-def run_dp():
+def run_dp(minotaur_can_stay=False, use_better=True):
 
-    use_better = False
     test_time = 40
 
     pss = build_state_space(with_obstacles=True)
@@ -328,7 +327,7 @@ def run_dp():
             max_exp_prob_function.append(0)
         else:
             p_a, u_init = build_action_space(pss, timesteps=test_t, can_stay=True)
-            m_a, _ = build_action_space(mss, timesteps=test_t, can_stay=True)
+            m_a, _ = build_action_space(mss, timesteps=test_t, can_stay=minotaur_can_stay)
 
             if use_better:
                 u_final, expected_max_prob = better_dp_max_prob(pss, mss, p_a, m_a, u_init, test_t)
@@ -348,9 +347,7 @@ def run_dp():
     x_axis = range(len(sim_max_prob_function))
     y_axis_sim = sim_max_prob_function
     y_axis_exp = max_exp_prob_function
-    plt.plot(x_axis, y_axis_sim, label="Simulated")
-    plt.plot(x_axis, y_axis_exp, label="Analytical")
-    plt.show()
+    return x_axis, y_axis_exp
 
 
 def value_iteration(pss, mss, p_a, m_a, v, lifespan):
@@ -361,6 +358,7 @@ def value_iteration(pss, mss, p_a, m_a, v, lifespan):
 
     gamma = 1 - (1 / lifespan)
 
+    iterations = 0
     delta = max_val
     convergence_condition = 10e-3
 
@@ -413,7 +411,10 @@ def value_iteration(pss, mss, p_a, m_a, v, lifespan):
 
                 delta += np.square(prev_v - max_reward)
 
+        iterations += 1
         delta = np.sqrt(delta)
+
+        print(f"I:{iterations} | Delta: {delta}")
 
     return v
 
@@ -493,13 +494,16 @@ def run_vi():
                           "t": time_deaths_of_t / n_samples_of_t}
 
         if 10 < key < 50:
-            plt.scatter(key, res_per_t[key]["m"], c='red')
-            plt.scatter(key, res_per_t[key]["s"], c='blue')
-            plt.scatter(key, res_per_t[key]["t"], c='green')
-            # plt.axvline(x=key, ymax=res_per_t[key]["m"], c='red')
-            # plt.axvline(x=key, ymax=res_per_t[key]["s"], c='blue')
-            # plt.axvline(x=key, ymax=res_per_t[key]["t"], c='green')
+            if key == 11:
+                plt.scatter(key, res_per_t[key]["m"], c='red', label='Death by Minotaur')
+                plt.scatter(key, res_per_t[key]["s"], c='blue', label='Win')
+                plt.scatter(key, res_per_t[key]["t"], c='green', label='Time out')
+            else:
+                plt.scatter(key, res_per_t[key]["m"], c='red')
+                plt.scatter(key, res_per_t[key]["s"], c='blue')
+                plt.scatter(key, res_per_t[key]["t"], c='green')
 
+    plt.legend()
     plt.show()
 
 
@@ -520,5 +524,12 @@ def plot_m_evolution():
         plt.show()
 
 
-# run_dp()
+x_axis, y_axis_stay = run_dp(minotaur_can_stay=True)
+_, y_axis = run_dp(minotaur_can_stay=False)
+
+plt.legend()
+plt.plot(x_axis, y_axis_stay, label="Minotaur can stay")
+plt.plot(x_axis, y_axis, label="Minotaur cannot stay")
+plt.show()
+
 # run_vi()
