@@ -121,7 +121,9 @@ def value_iteration(r_states, p_states, r_actions, p_actions, v):
 
     iterations = 0
     delta = max_val
-    convergence_condition = 10e-3
+    convergence_condition = 10e-6
+
+    v_init_evolution = []
 
     while delta > convergence_condition:
 
@@ -141,23 +143,24 @@ def value_iteration(r_states, p_states, r_actions, p_actions, v):
                 max_reward = min_val
                 next_state = None
 
+                # Calculate reward for this state
+                cur_reward = reward_function(robber_state, police_state)
+
                 # Probability matrix of the next moves of the police
                 next_police_prob = next_police_move(police_state, robber_state, p_actions)
 
                 # Calculate future rewards
                 for possible_robber_state in possible_robber_states:
-                    next_reward = 0
                     future_sum = 0
                     for possible_police_state in possible_police_states:
-                        police_next_prob = next_police_prob[possible_robber_state]
+                        police_next_prob = next_police_prob[possible_police_state]
 
                         possible_state = (possible_robber_state, possible_police_state)
                         v_possible = v[possible_state][0]
 
-                        next_reward += police_next_prob * reward_function(possible_robber_state, possible_police_state)
                         future_sum += police_next_prob * v_possible
 
-                    reward = next_reward + (gamma * future_sum)
+                    reward = cur_reward + (gamma * future_sum)
 
                     if reward > max_reward:
                         max_reward = reward
@@ -169,22 +172,28 @@ def value_iteration(r_states, p_states, r_actions, p_actions, v):
 
                 delta += np.square(prev_v - max_reward)
 
+        v_init_evolution.append(v[(init_robber, init_police)][0])
         iterations += 1
         delta = np.sqrt(delta)
 
-        # if iterations % 100 == 0:
         print(f"I:{iterations} | Delta: {delta}")
 
-    return v, iterations
+    return v, v_init_evolution, iterations
 
 
 state_space = build_state_space()
 robber_actions, v_val = build_action_space(state_space)
 police_actions, _ = build_action_space(state_space, can_stay=False)
 
-gamma = 0.8
-v_val, i_s = value_iteration(state_space, state_space, robber_actions, police_actions, v_val)
+gammas = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 
-v_init_state = v_val[(init_robber, init_police)]
+for gamma in gammas:
+    _, v_evolution, i_s = value_iteration(state_space, state_space, robber_actions, police_actions, v_val)
+    plt.plot(range(len(v_evolution)), v_evolution, label='gamma=' + str(gamma))
+    print(f"VI converged with lambda = {gamma} after {i_s} iterations.")
 
-print(f"VI converged with lambda = {gamma} after {i_s} iterations.")
+plt.legend()
+plt.show()
+plt.savefig("v_gamma.png")
+
+
