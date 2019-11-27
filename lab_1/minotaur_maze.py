@@ -527,9 +527,9 @@ def plot_m_evolution():
 x_axis, y_axis_stay = run_dp(minotaur_can_stay=True)
 _, y_axis = run_dp(minotaur_can_stay=False)
 
-plt.legend()
 plt.plot(x_axis, y_axis_stay, label="Minotaur can stay")
 plt.plot(x_axis, y_axis, label="Minotaur cannot stay")
+plt.legend()
 plt.show()
 
 # run_vi()
