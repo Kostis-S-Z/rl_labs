@@ -26,7 +26,7 @@ reward_map = np.array([
 reward_map[bank] = 1
 
 # Parameter values
-iterations = 5000000  # 10.000.000 = 10000000
+iterations = 10000000  # 10.000.000 = 10000000
 d_factor = 0.8
 
 
@@ -157,7 +157,7 @@ def plot_q(q_evolution, title="q_evolution"):
 def plot_v(q_max, title="v_evolution"):
     x_axis = range(len(q_max))
     y_axis = q_max
-    plt.plot(x_axis, y_axis, label="Q_max")
+    plt.plot(x_axis, y_axis)
     plt.legend()
     plt.show()
     plt.savefig(title + ".png")
