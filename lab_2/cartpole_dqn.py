@@ -11,12 +11,17 @@ from keras.models import Sequential
 EPISODES = 1000  # Maximum number of episodes
 
 
-# DQN Agent for the Cartpole
-# Q function approximation with NN, experience replay, and target network
 class DQNAgent:
-    # Constructor for the agent (invoked when DQN is first called in main)
+    """
+    DQN Agent for the Cartpole
+
+    Q function approximation with NN, experience replay, and target network
+    """
+
     def __init__(self, state_size, action_size):
-        self.check_solve = False  # If True, stop if you satisfy solution confition
+        # Constructor for the agent (invoked when DQN is first called in main)
+
+        self.check_solve = False  # If True, stop if you satisfy solution condition
         self.render = False  # If you want to see Cartpole learning, then change to True
 
         # Get size of state and action
@@ -28,7 +33,7 @@ class DQNAgent:
         # Set hyper parameters for the DQN. Do not adjust those labeled as Fixed.
         self.discount_factor = 0.95
         self.learning_rate = 0.005
-        self.epsilon = 0.02  # Fixed
+        self.epsilon = 1.  # Fixed TODO: Change this, now only random for testing
         self.batch_size = 32  # Fixed
         self.memory_size = 1000
         self.train_start = 1000  # Fixed
@@ -47,69 +52,84 @@ class DQNAgent:
         # Initialize target network
         self.update_target_model()
 
-    # Approximate Q function using Neural Network
-    # State is the input and the Q Values are the output.
-    ###############################################################################
-    ###############################################################################
-    # Edit the Neural Network model here
-    # Tip: Consult https://keras.io/getting-started/sequential-model-guide/
     def build_model(self):
+        """
+        Approximate Q function using Neural Network
+        Input: State
+        Output: Q-values
+        based on: https://keras.io/getting-started/sequential-model-guide/
+        """
         model = Sequential()
-        model.add(Dense(16, input_dim=self.state_size, activation='relu',
-                        kernel_initializer='he_uniform'))
-        model.add(Dense(self.action_size, activation='linear',
-                        kernel_initializer='he_uniform'))
+
+        model.add(Dense(16, input_dim=self.state_size, activation='relu', kernel_initializer='he_uniform'))
+
+        model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
+        model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
+        model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
+
+        model.add(Dense(self.action_size, activation='linear', kernel_initializer='he_uniform'))
+
         model.summary()
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
+
         return model
 
-    ###############################################################################
-    ###############################################################################
-
-    # After some time interval update the target model to be same with model
     def update_target_model(self):
+        """
+        After some time interval update the target model to be same with model
+        """
         self.target_model.set_weights(self.model.get_weights())
 
-    # Get action from model using epsilon-greedy policy
     def get_action(self, state):
-        ###############################################################################
-        ###############################################################################
-        # Insert your e-greedy policy code here
-        # Tip 1: Use the random package to generate a random action.
-        # Tip 2: Use keras.model.predict() to compute Q-values from the state.
-        action = random.randrange(self.action_size)
+        """
+        Get action from model using epsilon-greedy policy
+
+        With probability random > epsilon, choose optimal action
+        Otherwise, choose randomly from the action space
+        """
+
+        if np.random.rand() > self.epsilon:
+            action = self.model.predict(state)  # TODO: model or target model?
+        else:
+            action = random.randrange(self.action_size)
+
         return action
 
-    ###############################################################################
-    ###############################################################################
-    # Save sample <s,a,r,s'> to the replay memory
     def append_sample(self, state, action, reward, next_state, done):
+        """
+        Experience Replay: Save sample <s,a,r,s'> to the replay memory
+        """
         self.memory.append((state, action, reward, next_state, done))  # Add sample to the end of the list
 
-    # Sample <s,a,r,s'> from replay memory
     def train_model(self):
+        """
+        Sample <s,a,r,s'> from replay memory
+        """
+
         if len(self.memory) < self.train_start:  # Do not train if not enough memory
             return
+
         batch_size = min(self.batch_size, len(self.memory))  # Train on at most as many samples as you have in memory
         mini_batch = random.sample(self.memory, batch_size)  # Uniformly sample the memory buffer
+
         # Preallocate network and target network input matrices.
-        update_input = np.zeros(
-            (batch_size, self.state_size))  # batch_size by state_size two-dimensional array (not matrix!)
+        update_input = np.zeros((batch_size, self.state_size))  # batch_size by state_size two-dimensional array
         update_target = np.zeros((batch_size, self.state_size))  # Same as above, but used for the target network
+
         action, reward, done = [], [], []  # Empty arrays that will grow dynamically
 
         for i in range(self.batch_size):
-            update_input[i] = mini_batch[i][0]  # Allocate s(i) to the network input array from iteration i in the batch
+            update_input[i] = mini_batch[i][0]  # Allocate s(i) to the network input array from iteration i of batch
             action.append(mini_batch[i][1])  # Store a(i)
             reward.append(mini_batch[i][2])  # Store r(i)
-            update_target[i] = mini_batch[i][
-                3]  # Allocate s'(i) for the target network array from iteration i in the batch
+            update_target[i] = mini_batch[i][3]  # Allocate s'(i) for the target network array from iteration i of batch
             done.append(mini_batch[i][4])  # Store done(i)
 
-        target = self.model.predict(
-            update_input)  # Generate target values for training the inner loop network using the network model
-        target_val = self.target_model.predict(
-            update_target)  # Generate the target values for training the outer loop target network
+        # Generate target values for training the inner loop network using the network model
+        target = self.model.predict(update_input)
+
+        # Generate the target values for training the outer loop target network
+        target_val = self.target_model.predict(update_target)
 
         # Q Learning: get maximum Q value at s' from target network
         ###############################################################################
@@ -123,12 +143,14 @@ class DQNAgent:
         ###############################################################################
 
         # Train the inner loop network
-        self.model.fit(update_input, target, batch_size=self.batch_size,
-                       epochs=1, verbose=0)
+        self.model.fit(update_input, target, batch_size=self.batch_size, epochs=1, verbose=0)
+
         return
 
-    # Plots the score per episode as well as the maximum q value per episode, averaged over precollected states.
     def plot_data(self, episodes, scores, max_q_mean):
+        """
+        Plots the score per episode as well as the maximum q value per episode, averaged over precollected states.
+        """
         pylab.figure(0)
         pylab.plot(episodes, max_q_mean, 'b')
         pylab.xlabel("Episodes")
@@ -141,9 +163,6 @@ class DQNAgent:
         pylab.ylabel("Score")
         pylab.savefig("scores.png")
 
-
-###############################################################################
-###############################################################################
 
 if __name__ == "__main__":
     # For CartPole-v0, maximum episode length is 200
@@ -174,13 +193,14 @@ if __name__ == "__main__":
             test_states[i] = state
             state = next_state
 
+    # Start training
     scores, episodes = [], []  # Create dynamically growing score and episode counters
     for e in range(EPISODES):
         done = False
         score = 0
         state = env.reset()  # Initialize/reset the environment
-        state = np.reshape(state, [1,
-                                   state_size])  # Reshape state so that to a 1 by state_size two-dimensional array ie. [x_1,x_2] to [[x_1,x_2]]
+        state = np.reshape(state, [1, state_size])  # Reshape state ie. [x_1,x_2] to [[x_1,x_2]]
+
         # Compute Q values for plotting
         tmp = agent.model.predict(test_states)
         max_q[e][:] = np.max(tmp, axis=1)
@@ -197,6 +217,7 @@ if __name__ == "__main__":
 
             # Save sample <s, a, r, s'> to the replay memory
             agent.append_sample(state, action, reward, next_state, done)
+
             # Training step
             agent.train_model()
             score += reward  # Store episodic reward
@@ -210,8 +231,7 @@ if __name__ == "__main__":
                 scores.append(score)
                 episodes.append(e)
 
-                print("episode:", e, "  score:", score, " q_value:", max_q_mean[e], "  memory length:",
-                      len(agent.memory))
+                print("episode:", e, " score:", score, " q_value:", max_q_mean[e], " memory length:", len(agent.memory))
 
                 # if the mean of scores of last 100 episodes is bigger than 195
                 # stop training
