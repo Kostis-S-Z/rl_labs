@@ -1,7 +1,10 @@
 import sys
+import os
 import gym
 import random
+import json
 import numpy as np
+
 from collections import deque
 from keras.layers import Dense
 from keras.optimizers import Adam
@@ -9,7 +12,7 @@ from keras.models import Sequential
 
 from lab_2.utils import *
 
-EPISODES = 1000  # Maximum number of episodes
+EPISODES = 100  # Maximum number of episodes
 test_state_no = 10000
 
 # Define default parameters of agent
@@ -25,9 +28,9 @@ def_params = {
 
 # Define a simple Neural Network Architecture
 net = {
-    'input_layer': 256,
-    'layer_1': 256,
-    'layer_2': 256
+    'input_layer': 16
+    # 'layer_1': 256,
+    # 'layer_2': 256
 }
 
 
@@ -40,14 +43,12 @@ class DQNAgent:
 
     def __init__(self, net_arch):
 
-        self.check_solve = False  # If True, stop if you satisfy solution condition
+        self.check_solve = True  # If True, stop if you satisfy solution condition
         self.render = False  # If you want to see Cartpole learning, then change to True
 
         # Get size of state and action
         self.state_size = state_size
         self.action_size = action_size
-
-        # Modify here
 
         # Set hyper parameters for the DQN. Do not adjust those labeled as Fixed.
         self.discount_factor = def_params['discount_factor']
@@ -164,7 +165,7 @@ class DQNAgent:
         return
 
 
-def train(net_arch):
+def train(net_arch, model_name="results"):
     """
     Train DQN Agent
     """
@@ -218,9 +219,9 @@ def train(net_arch):
                 if agent.check_solve:
                     if np.mean(scores[-min(100, len(scores)):]) >= 195:
                         print("solved after", e - 100, "episodes")
-                        plot_data(episodes, scores, max_q_mean[:e + 1])
+                        plot_data(episodes, scores, max_q_mean[:e + 1], model_name)
                         sys.exit()
-    plot_data(episodes, scores, max_q_mean)
+    plot_data(episodes, scores, max_q_mean, model_name)
 
 
 def sample_test_states():
@@ -253,16 +254,24 @@ def net_exp():
     net_3 = {'input_layer': 64, 'layer_1': 128, 'layer_2': 256}
     net_4 = {'input_layer': 64, 'layer_1': 128, 'layer_2': 256}
 
-    nets = [net_1, net_2, net_3, net_4]
-
-    for net_i in nets:
-        train(net_i)
+    nets = {
+        "net_1": net_1,
+        "net_2": net_2,
+        "net_3": net_3,
+        "net_4": net_4
+    }
+    for name, net_i in nets.items():
+        os.mkdir(name)
+        train(net_i, model_name=name)
 
 
 def hyper_exp():
     d_factors = [0.5, 0.8, 0.9]
     lrs = [0.01, 0.05, 0.001]
     mems = [1000, 5000]
+
+    i = 0
+    exp_name = "hyper_exp_"
 
     for d_factor in d_factors:
         def_params['discount_factor'] = d_factor
@@ -271,7 +280,13 @@ def hyper_exp():
             for mem in mems:
                 def_params['memory_size'] = mem
 
-                train(net)
+                model_name = exp_name + str(i)
+                os.mkdir(model_name)
+                with open(model_name + '/params.json', 'w') as fp:
+                    json.dump(def_params, fp)
+
+                train(net, model_name=model_name)
+                i += 1
 
 
 def target_update_exp():
@@ -294,9 +309,9 @@ if __name__ == "__main__":
     # Collect test states
     test_states = sample_test_states()
 
-    train(net)
+    # train(net)
 
     # net_exp()
-    # hyper_exp()
+    hyper_exp()
     # target_update_exp()
 
