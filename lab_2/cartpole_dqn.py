@@ -164,7 +164,7 @@ class DQNAgent:
         return
 
 
-def train(net_arch, model_name=""):
+def train(net_arch):
     """
     Train DQN Agent
     """
@@ -218,9 +218,9 @@ def train(net_arch, model_name=""):
                 if agent.check_solve:
                     if np.mean(scores[-min(100, len(scores)):]) >= 195:
                         print("solved after", e - 100, "episodes")
-                        plot_data(episodes, scores, max_q_mean[:e + 1], model_name)
+                        plot_data(episodes, scores, max_q_mean[:e + 1])
                         sys.exit()
-    plot_data(episodes, scores, max_q_mean, model_name)
+    plot_data(episodes, scores, max_q_mean)
 
 
 def sample_test_states():
