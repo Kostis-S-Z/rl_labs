@@ -10,7 +10,7 @@ from keras.models import Sequential
 
 from lab_2.utils import *
 
-EPISODES = 100  # Maximum number of episodes
+EPISODES = 1000  # Maximum number of episodes
 test_state_no = 10000
 
 # Define default parameters of agent
@@ -27,8 +27,8 @@ def_params = {
 # Define a simple Neural Network Architecture
 net = {
     'input_layer': 64,
-    'layer_1': 256,
-    'layer_2': 256
+    'layer_1': 128,
+    'layer_2': 128
 }
 
 
@@ -309,7 +309,6 @@ if __name__ == "__main__":
 
     train(def_params, net)
 
-    net_exp()
-    hyper_exp()
-    target_update_exp()
-
+    # net_exp()
+    # hyper_exp()
+    # target_update_exp()
