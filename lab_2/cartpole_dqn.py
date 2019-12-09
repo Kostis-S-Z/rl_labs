@@ -7,7 +7,7 @@ from keras.layers import Dense
 from keras.optimizers import Adam
 from keras.models import Sequential
 
-from utils import *
+from lab_2.utils import *
 
 EPISODES = 1000  # Maximum number of episodes
 test_state_no = 10000
