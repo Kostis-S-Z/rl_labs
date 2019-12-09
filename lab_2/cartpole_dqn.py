@@ -13,6 +13,8 @@ from lab_2.utils import *
 EPISODES = 1000  # Maximum number of episodes
 test_state_no = 10000
 
+use_epsilon_policy = True
+
 # Define default parameters of agent
 def_params = {
     'discount_factor': 0.95,
@@ -29,6 +31,14 @@ net = {
     'input_layer': 64,
     'layer_1': 128,
     'layer_2': 128
+}
+
+# Define linear epsilon decay policy
+e_policy = {
+    'mode': 'per_X_episodes',
+    'start_epsilon': 1.0,
+    'per_episode': 20,
+    'decay': 0.1
 }
 
 
@@ -69,6 +79,9 @@ class DQNAgent:
         self.model = self.build_model()
         self.target_model = self.build_model()
 
+        # Count in which episode you are (used for linear epsilon policy)
+        self.episode = 0
+
         # Initialize target network
         self.update_target_model()
 
@@ -101,7 +114,28 @@ class DQNAgent:
         """
         self.target_model.set_weights(self.model.get_weights())
 
-    def get_action(self, state):
+    def get_epsilon(self, episode):
+        """
+        Return a fixed epsilon value or use a linear policy
+        Linear policy:
+        - At episode 0: initialize with given value
+        - Every X episodes decay the epsilon
+            - Make sure its a new episode (self.episode != episode)
+            - Make sure you don't go below zero
+        """
+        if use_epsilon_policy:
+            if episode == 0:
+                self.epsilon = e_policy['start_epsilon']
+            elif episode % e_policy['per_episode'] == 0 and self.episode != episode:
+                new_epsilon = self.epsilon - e_policy['decay']
+                if new_epsilon > 0:
+                    print(f"Decay epsilon from {self.epsilon} to {new_epsilon}")
+                    self.epsilon = new_epsilon
+                    self.episode = episode
+
+        return self.epsilon
+
+    def get_action(self, state, episode):
         """
         Get action from model using epsilon-greedy policy
 
@@ -109,7 +143,7 @@ class DQNAgent:
         Otherwise, choose randomly from the action space
         """
 
-        if np.random.rand() > self.epsilon:
+        if np.random.rand() > self.get_epsilon(episode):
             action = np.argmax(self.model.predict(state))
         else:
             action = random.randrange(self.action_size)
@@ -128,7 +162,7 @@ class DQNAgent:
         """
 
         if len(self.memory) < self.train_start:  # Do not train if not enough memory
-            return
+            return None
 
         batch_size = min(self.batch_size, len(self.memory))  # Train on at most as many samples as you have in memory
         mini_batch = random.sample(self.memory, batch_size)  # Uniformly sample the memory buffer
@@ -158,9 +192,9 @@ class DQNAgent:
                 target[i][action[i]] += self.discount_factor * np.max(target_val[i])
 
         # Train the inner loop network
-        self.model.fit(update_input, target, batch_size=self.batch_size, epochs=1, verbose=0)
+        history = self.model.fit(update_input, target, batch_size=self.batch_size, epochs=1, verbose=0)
 
-        return
+        return history.history['loss']
 
 
 def train(params, net_arch, model_name="results"):
@@ -169,11 +203,12 @@ def train(params, net_arch, model_name="results"):
     """
 
     agent = DQNAgent(net_arch)
+    save_params(model_name, params, net_arch)
 
     max_q = np.zeros((EPISODES, agent.test_state_no))
     max_q_mean = np.zeros((EPISODES, 1))
 
-    scores, episodes = [], []  # Create dynamically growing score and episode counters
+    scores, episodes, loss = [], [], []  # Create dynamically growing score and episode counters
     for e in range(EPISODES):
         done = False
         score = 0
@@ -191,7 +226,7 @@ def train(params, net_arch, model_name="results"):
                 env.render()  # Show cartpole animation
 
             # Get action for the current state and go one step in environment
-            action = agent.get_action(state)
+            action = agent.get_action(state, e)
             next_state, reward, done, info = env.step(action)
             next_state = np.reshape(next_state, [1, state_size])  # Reshape next_state similarly to state
 
@@ -199,7 +234,7 @@ def train(params, net_arch, model_name="results"):
             agent.append_sample(state, action, reward, next_state, done)
 
             # Training step
-            agent.train_model()
+            loss_i = agent.train_model()
             score += reward  # Store episodic reward
             state = next_state  # Propagate state
 
@@ -220,9 +255,9 @@ def train(params, net_arch, model_name="results"):
                         print("solved after", e - 100, "episodes")
                         plot_data(episodes, scores, max_q_mean[:e + 1], model_name)
                         sys.exit()
-    plot_data(episodes, scores, max_q_mean, model_name)
 
-    save_params(model_name, params, net_arch)
+    plot_data(episodes, scores, max_q_mean, model_name)
+    # plot_loss(loss, model_name)
 
 
 def sample_test_states():

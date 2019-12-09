@@ -22,8 +22,19 @@ def plot_data(episodes, scores, max_q_mean, model_name):
     pylab.show()
 
 
+def plot_loss(loss, model_name):
+    x_axis = range(1, len(loss) + 1)
+    y_axis = loss
+    pylab.plot(x_axis, y_axis)
+    pylab.xlabel('Epochs')
+    pylab.ylabel('Loss')
+    pylab.savefig(model_name + "/loss.png")
+    pylab.show()
+
+
 def save_params(model_name, params, net):
-    os.mkdir(model_name)
+    if not os.path.exists(model_name):
+        os.mkdir(model_name)
 
     with open(model_name + '/params.json', 'w') as fp:
         json.dump(params, fp)
