@@ -16,7 +16,7 @@ test_state_no = 10000
 def_params = {
     'discount_factor': 0.95,
     'learning_rate': 0.005,
-    'epsilon': 1.0,  # TODO: Change this, now only random for testing
+    'epsilon': 0.02,
     'batch_size': 32,
     'memory_size': 1000,
     'train_start': 1000,
@@ -25,9 +25,9 @@ def_params = {
 
 # Define a simple Neural Network Architecture
 net = {
-    'layer_1': 128,
-    'layer_2': 256,
-    'layer_3': 512
+    'input_layer': 256,
+    'layer_1': 256,
+    'layer_2': 256
 }
 
 
@@ -82,7 +82,8 @@ class DQNAgent:
         """
         model = Sequential()
 
-        model.add(Dense(16, input_dim=self.state_size, activation='relu', kernel_initializer='he_uniform'))
+        model.add(Dense(self.net['input_layer'], input_dim=self.state_size,
+                        activation='relu', kernel_initializer='he_uniform'))
 
         # Add layers
         for i, units in self.net.items():
@@ -110,7 +111,7 @@ class DQNAgent:
         """
 
         if np.random.rand() > self.epsilon:
-            action = self.model.predict(state)  # TODO: model or target model?
+            action = np.argmax(self.model.predict(state))
         else:
             action = random.randrange(self.action_size)
 
@@ -152,16 +153,10 @@ class DQNAgent:
         # Generate the target values for training the outer loop target network
         target_val = self.target_model.predict(update_target)
 
-        # Q Learning: get maximum Q value at s' from target network
-        ###############################################################################
-        ###############################################################################
-        # Insert your Q-learning code here
-        # Tip 1: Observe that the Q-values are stored in the variable target
-        # Tip 2: What is the Q-value of the action taken at the last state of the episode?
-        for i in range(self.batch_size):  # For every batch
-            target[i][action[i]] = random.randint(0, 1)
-        ###############################################################################
-        ###############################################################################
+        for i in range(self.batch_size):
+            target[i][action[i]] = reward[i]
+            if not done[i]:
+                target[i][action[i]] += self.discount_factor * np.max(target_val[i])
 
         # Train the inner loop network
         self.model.fit(update_input, target, batch_size=self.batch_size, epochs=1, verbose=0)
@@ -169,7 +164,7 @@ class DQNAgent:
         return
 
 
-def train(net_arch):
+def train(net_arch, model_name=""):
     """
     Train DQN Agent
     """
@@ -186,6 +181,7 @@ def train(net_arch):
         state = np.reshape(state, [1, state_size])  # Reshape state ie. [x_1,x_2] to [[x_1,x_2]]
 
         # Compute Q values for plotting
+        # Helps us monitor the model performance by evaluating in random states and see what actions it would take
         tmp = agent.model.predict(test_states)
         max_q[e][:] = np.max(tmp, axis=1)
         max_q_mean[e] = np.mean(max_q[e][:])
@@ -222,9 +218,9 @@ def train(net_arch):
                 if agent.check_solve:
                     if np.mean(scores[-min(100, len(scores)):]) >= 195:
                         print("solved after", e - 100, "episodes")
-                        plot_data(episodes, scores, max_q_mean[:e + 1])
+                        plot_data(episodes, scores, max_q_mean[:e + 1], model_name)
                         sys.exit()
-    plot_data(episodes, scores, max_q_mean)
+    plot_data(episodes, scores, max_q_mean, model_name)
 
 
 def sample_test_states():
@@ -252,10 +248,10 @@ def sample_test_states():
 
 
 def net_exp():
-    net_1 = {'layer_1': 128, 'layer_2': 256}
-    net_2 = {'layer_1': 128, 'layer_2': 256}
-    net_3 = {'layer_1': 128, 'layer_2': 256}
-    net_4 = {'layer_1': 128, 'layer_2': 256}
+    net_1 = {'input_layer': 64, 'layer_1': 128, 'layer_2': 256}
+    net_2 = {'input_layer': 64, 'layer_1': 128, 'layer_2': 256}
+    net_3 = {'input_layer': 64, 'layer_1': 128, 'layer_2': 256}
+    net_4 = {'input_layer': 64, 'layer_1': 128, 'layer_2': 256}
 
     nets = [net_1, net_2, net_3, net_4]
 
