@@ -295,7 +295,9 @@ def target_update_exp():
     for tar_update in tar_updates:
         def_params['target_update_frequency'] = tar_update
 
-        train(net)
+        name = 'tar_update_' + str(tar_update)
+        os.mkdir(name)
+        train(net, model_name=name)
 
 
 if __name__ == "__main__":
@@ -309,9 +311,9 @@ if __name__ == "__main__":
     # Collect test states
     test_states = sample_test_states()
 
-    # train(net)
+    train(net)
 
     # net_exp()
-    hyper_exp()
+    # hyper_exp()
     # target_update_exp()
 
