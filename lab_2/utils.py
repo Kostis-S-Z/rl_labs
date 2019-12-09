@@ -1,7 +1,7 @@
 import pylab
 
 
-def plot_data(episodes, scores, max_q_mean, model_name):
+def plot_data(episodes, scores, max_q_mean):
     """
     Plots the score per episode as well as the maximum q value per episode, averaged over precollected states.
     """
@@ -9,12 +9,12 @@ def plot_data(episodes, scores, max_q_mean, model_name):
     pylab.plot(episodes, max_q_mean, 'b')
     pylab.xlabel("Episodes")
     pylab.ylabel("Average Q Value")
-    pylab.savefig(f"q_values_{model_name}.png")
+    pylab.savefig("qvalues.png")
     pylab.show()
 
     pylab.figure(1)
     pylab.plot(episodes, scores, 'b')
     pylab.xlabel("Episodes")
     pylab.ylabel("Score")
-    pylab.savefig(f"scores_{model_name}.png")
+    pylab.savefig("scores.png")
     pylab.show()
