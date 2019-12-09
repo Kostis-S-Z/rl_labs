@@ -1,6 +1,5 @@
 import sys
 import gym
-import pylab
 import random
 import numpy as np
 from collections import deque
@@ -8,7 +7,28 @@ from keras.layers import Dense
 from keras.optimizers import Adam
 from keras.models import Sequential
 
+from utils import *
+
 EPISODES = 1000  # Maximum number of episodes
+test_state_no = 10000
+
+# Define default parameters of agent
+def_params = {
+    'discount_factor': 0.95,
+    'learning_rate': 0.005,
+    'epsilon': 1.0,  # TODO: Change this, now only random for testing
+    'batch_size': 32,
+    'memory_size': 1000,
+    'train_start': 1000,
+    'target_update_frequency': 1,
+}
+
+# Define a simple Neural Network Architecture
+net = {
+    'layer_1': 128,
+    'layer_2': 256,
+    'layer_3': 512
+}
 
 
 class DQNAgent:
@@ -18,8 +38,7 @@ class DQNAgent:
     Q function approximation with NN, experience replay, and target network
     """
 
-    def __init__(self, state_size, action_size):
-        # Constructor for the agent (invoked when DQN is first called in main)
+    def __init__(self, net_arch):
 
         self.check_solve = False  # If True, stop if you satisfy solution condition
         self.render = False  # If you want to see Cartpole learning, then change to True
@@ -31,16 +50,18 @@ class DQNAgent:
         # Modify here
 
         # Set hyper parameters for the DQN. Do not adjust those labeled as Fixed.
-        self.discount_factor = 0.95
-        self.learning_rate = 0.005
-        self.epsilon = 1.  # Fixed TODO: Change this, now only random for testing
-        self.batch_size = 32  # Fixed
-        self.memory_size = 1000
-        self.train_start = 1000  # Fixed
-        self.target_update_frequency = 1
+        self.discount_factor = def_params['discount_factor']
+        self.learning_rate = def_params['learning_rate']
+        self.epsilon = def_params['epsilon']
+        self.batch_size = def_params['batch_size']
+        self.memory_size = def_params['memory_size']
+        self.train_start = def_params['train_start']
+        self.target_update_frequency = def_params['target_update_frequency']
+
+        self.net = net_arch
 
         # Number of test states for Q value plots
-        self.test_state_no = 10000
+        self.test_state_no = test_state_no
 
         # Create memory buffer using deque
         self.memory = deque(maxlen=self.memory_size)
@@ -63,9 +84,9 @@ class DQNAgent:
 
         model.add(Dense(16, input_dim=self.state_size, activation='relu', kernel_initializer='he_uniform'))
 
-        model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
-        model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
-        model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
+        # Add layers
+        for i, units in self.net.items():
+            model.add(Dense(units, activation='relu', kernel_initializer='he_uniform'))
 
         model.add(Dense(self.action_size, activation='linear', kernel_initializer='he_uniform'))
 
@@ -147,53 +168,16 @@ class DQNAgent:
 
         return
 
-    def plot_data(self, episodes, scores, max_q_mean):
-        """
-        Plots the score per episode as well as the maximum q value per episode, averaged over precollected states.
-        """
-        pylab.figure(0)
-        pylab.plot(episodes, max_q_mean, 'b')
-        pylab.xlabel("Episodes")
-        pylab.ylabel("Average Q Value")
-        pylab.savefig("qvalues.png")
 
-        pylab.figure(1)
-        pylab.plot(episodes, scores, 'b')
-        pylab.xlabel("Episodes")
-        pylab.ylabel("Score")
-        pylab.savefig("scores.png")
+def train(net_arch):
+    """
+    Train DQN Agent
+    """
+    agent = DQNAgent(net_arch)
 
-
-if __name__ == "__main__":
-    # For CartPole-v0, maximum episode length is 200
-    env = gym.make('CartPole-v0')  # Generate Cartpole-v0 environment object from the gym library
-    # Get state and action sizes from the environment
-    state_size = env.observation_space.shape[0]
-    action_size = env.action_space.n
-
-    # Create agent, see the DQNAgent __init__ method for details
-    agent = DQNAgent(state_size, action_size)
-
-    # Collect test states for plotting Q values using uniform random policy
-    test_states = np.zeros((agent.test_state_no, state_size))
     max_q = np.zeros((EPISODES, agent.test_state_no))
     max_q_mean = np.zeros((EPISODES, 1))
 
-    done = True
-    for i in range(agent.test_state_no):
-        if done:
-            done = False
-            state = env.reset()
-            state = np.reshape(state, [1, state_size])
-            test_states[i] = state
-        else:
-            action = random.randrange(action_size)
-            next_state, reward, done, info = env.step(action)
-            next_state = np.reshape(next_state, [1, state_size])
-            test_states[i] = state
-            state = next_state
-
-    # Start training
     scores, episodes = [], []  # Create dynamically growing score and episode counters
     for e in range(EPISODES):
         done = False
@@ -238,6 +222,85 @@ if __name__ == "__main__":
                 if agent.check_solve:
                     if np.mean(scores[-min(100, len(scores)):]) >= 195:
                         print("solved after", e - 100, "episodes")
-                        agent.plot_data(episodes, scores, max_q_mean[:e + 1])
+                        plot_data(episodes, scores, max_q_mean[:e + 1])
                         sys.exit()
-    agent.plot_data(episodes, scores, max_q_mean)
+    plot_data(episodes, scores, max_q_mean)
+
+
+def sample_test_states():
+    """
+    Collect test states for plotting Q values using uniform random policy
+    """
+    samples_test_states = np.zeros((test_state_no, state_size))
+
+    done = True
+    state = env.reset()
+    for i in range(test_state_no):
+        if done:
+            done = False
+            state = env.reset()
+            state = np.reshape(state, [1, state_size])
+            samples_test_states[i] = state
+        else:
+            action = random.randrange(action_size)
+            next_state, reward, done, info = env.step(action)
+            next_state = np.reshape(next_state, [1, state_size])
+            samples_test_states[i] = state
+            state = next_state
+
+    return samples_test_states
+
+
+def net_exp():
+    net_1 = {'layer_1': 128, 'layer_2': 256}
+    net_2 = {'layer_1': 128, 'layer_2': 256}
+    net_3 = {'layer_1': 128, 'layer_2': 256}
+    net_4 = {'layer_1': 128, 'layer_2': 256}
+
+    nets = [net_1, net_2, net_3, net_4]
+
+    for net_i in nets:
+        train(net_i)
+
+
+def hyper_exp():
+    d_factors = [0.5, 0.8, 0.9]
+    lrs = [0.01, 0.05, 0.001]
+    mems = [1000, 5000]
+
+    for d_factor in d_factors:
+        def_params['discount_factor'] = d_factor
+        for lr in lrs:
+            def_params['learning_rate'] = lr
+            for mem in mems:
+                def_params['memory_size'] = mem
+
+                train(net)
+
+
+def target_update_exp():
+    tar_updates = [1, 10, 100]
+
+    for tar_update in tar_updates:
+        def_params['target_update_frequency'] = tar_update
+
+        train(net)
+
+
+if __name__ == "__main__":
+    # For CartPole-v0, maximum episode length is 200
+    env = gym.make('CartPole-v0')  # Generate Cartpole-v0 environment object from the gym library
+
+    # Get state and action sizes from the environment
+    state_size = env.observation_space.shape[0]
+    action_size = env.action_space.n
+
+    # Collect test states
+    test_states = sample_test_states()
+
+    train(net)
+
+    # net_exp()
+    # hyper_exp()
+    # target_update_exp()
+
