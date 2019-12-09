@@ -1,8 +1,6 @@
 import sys
-import os
 import gym
 import random
-import json
 import numpy as np
 
 from collections import deque
@@ -28,9 +26,9 @@ def_params = {
 
 # Define a simple Neural Network Architecture
 net = {
-    'input_layer': 16
-    # 'layer_1': 256,
-    # 'layer_2': 256
+    'input_layer': 64,
+    'layer_1': 256,
+    'layer_2': 256
 }
 
 
@@ -165,10 +163,11 @@ class DQNAgent:
         return
 
 
-def train(net_arch, model_name="results"):
+def train(params, net_arch, model_name="results"):
     """
     Train DQN Agent
     """
+
     agent = DQNAgent(net_arch)
 
     max_q = np.zeros((EPISODES, agent.test_state_no))
@@ -223,6 +222,8 @@ def train(net_arch, model_name="results"):
                         sys.exit()
     plot_data(episodes, scores, max_q_mean, model_name)
 
+    save_params(model_name, params, net_arch)
+
 
 def sample_test_states():
     """
@@ -261,8 +262,7 @@ def net_exp():
         "net_4": net_4
     }
     for name, net_i in nets.items():
-        os.mkdir(name)
-        train(net_i, model_name=name)
+        train(def_params, net_i, model_name=name)
 
 
 def hyper_exp():
@@ -281,11 +281,7 @@ def hyper_exp():
                 def_params['memory_size'] = mem
 
                 model_name = exp_name + str(i)
-                os.mkdir(model_name)
-                with open(model_name + '/params.json', 'w') as fp:
-                    json.dump(def_params, fp)
-
-                train(net, model_name=model_name)
+                train(def_params, net, model_name=model_name)
                 i += 1
 
 
@@ -295,9 +291,9 @@ def target_update_exp():
     for tar_update in tar_updates:
         def_params['target_update_frequency'] = tar_update
 
-        name = 'tar_update_' + str(tar_update)
-        os.mkdir(name)
-        train(net, model_name=name)
+        model_name = 'tar_update_' + str(tar_update)
+
+        train(def_params, net, model_name=model_name)
 
 
 if __name__ == "__main__":
@@ -311,9 +307,9 @@ if __name__ == "__main__":
     # Collect test states
     test_states = sample_test_states()
 
-    train(net)
+    train(def_params, net)
 
-    # net_exp()
-    # hyper_exp()
-    # target_update_exp()
+    net_exp()
+    hyper_exp()
+    target_update_exp()
 
