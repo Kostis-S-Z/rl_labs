@@ -7,13 +7,14 @@ from collections import deque
 from keras.layers import Dense
 from keras.optimizers import Adam
 from keras.models import Sequential
+from keras.utils import plot_model
 
 from lab_2.utils import *
 
 EPISODES = 1000  # Maximum number of episodes
 test_state_no = 10000
 
-use_epsilon_policy = True
+use_epsilon_policy = False
 
 # Define default parameters of agent
 def_params = {
@@ -99,6 +100,8 @@ class DQNAgent:
 
         # Add layers
         for i, units in self.net.items():
+            if i == 'input_layer':
+                continue
             model.add(Dense(units, activation='relu', kernel_initializer='he_uniform'))
 
         model.add(Dense(self.action_size, activation='linear', kernel_initializer='he_uniform'))
@@ -197,13 +200,16 @@ class DQNAgent:
         return history.history['loss']
 
 
-def train(params, net_arch, model_name="results"):
+def train(params, net_arch, model_name="results", plot_model_figure=False):
     """
     Train DQN Agent
     """
 
     agent = DQNAgent(net_arch)
     save_params(model_name, params, net_arch)
+    if plot_model_figure:
+        plot_model(agent.model, to_file=model_name + '/' + model_name + '.png',
+                   show_layer_names=False, show_shapes=True)
 
     max_q = np.zeros((EPISODES, agent.test_state_no))
     max_q_mean = np.zeros((EPISODES, 1))
@@ -285,10 +291,15 @@ def sample_test_states():
 
 
 def net_exp():
-    net_1 = {'input_layer': 64, 'layer_1': 128, 'layer_2': 256}
-    net_2 = {'input_layer': 64, 'layer_1': 128, 'layer_2': 256}
-    net_3 = {'input_layer': 64, 'layer_1': 128, 'layer_2': 256}
-    net_4 = {'input_layer': 64, 'layer_1': 128, 'layer_2': 256}
+    net_1 = {'input_layer': 64, 'layer_1': 64, 'layer_2': 64, 'layer_3': 64,
+             'layer_4': 64, 'layer_5': 64, 'layer_6': 64}
+
+    net_2 = {'input_layer': 512, 'layer_1': 512}
+
+    net_3 = {'input_layer': 64, 'layer_1': 128, 'layer_2': 256, 'layer_3': 512}
+
+    net_4 = {'input_layer': 16, 'layer_1': 32, 'layer_2': 64, 'layer_3': 128,
+             'layer_4': 64, 'layer_5': 32, 'layer_6': 16}
 
     nets = {
         "net_1": net_1,
@@ -297,7 +308,7 @@ def net_exp():
         "net_4": net_4
     }
     for name, net_i in nets.items():
-        train(def_params, net_i, model_name=name)
+        train(def_params, net_i, model_name=name, plot_model_figure=True)
 
 
 def hyper_exp():
