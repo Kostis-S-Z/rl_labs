@@ -3,7 +3,7 @@ import os
 import json
 
 
-def plot_data(episodes, scores, max_q_mean, model_name):
+def plot_data(episodes, scores, max_q_mean, mean_scores, model_name):
     """
     Plots the score per episode as well as the maximum q value per episode, averaged over precollected states.
     """
@@ -19,6 +19,13 @@ def plot_data(episodes, scores, max_q_mean, model_name):
     pylab.xlabel("Episodes")
     pylab.ylabel("Score")
     pylab.savefig(model_name + "/scores.png")
+    pylab.show()
+
+    pylab.figure(2)
+    pylab.plot(episodes[99:], mean_scores[99:], 'b')
+    pylab.xlabel("Episodes")
+    pylab.ylabel("Mean Score of last 100 episodes")
+    pylab.savefig(model_name + "/mean_scores.png")
     pylab.show()
 
 

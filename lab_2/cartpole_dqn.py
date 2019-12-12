@@ -11,7 +11,7 @@ from keras.utils import plot_model
 
 from lab_2.utils import *
 
-EPISODES = 1000  # Maximum number of episodes
+EPISODES = 10000  # Maximum number of episodes
 test_state_no = 10000
 
 use_epsilon_policy = False
@@ -29,16 +29,16 @@ def_params = {
 
 # Define a simple Neural Network Architecture
 net = {
-    'input_layer': 64,
-    'layer_1': 128,
-    'layer_2': 128
+    'input_layer': 16,
+    'layer_1': 16 # ,
+    # 'layer_2': 128
 }
 
 # Define linear epsilon decay policy
 e_policy = {
     'mode': 'per_X_episodes',
     'start_epsilon': 1.0,
-    'per_episode': 20,
+    'per_episode': 50,
     'decay': 0.1
 }
 
@@ -214,7 +214,7 @@ def train(params, net_arch, model_name="results", plot_model_figure=False):
     max_q = np.zeros((EPISODES, agent.test_state_no))
     max_q_mean = np.zeros((EPISODES, 1))
 
-    scores, episodes, loss = [], [], []  # Create dynamically growing score and episode counters
+    scores, episodes, loss, mean_scores = [], [], [], []  # Create dynamically growing score and episode counters
     for e in range(EPISODES):
         done = False
         score = 0
@@ -252,17 +252,21 @@ def train(params, net_arch, model_name="results", plot_model_figure=False):
                 scores.append(score)
                 episodes.append(e)
 
-                print("episode:", e, " score:", score, " q_value:", max_q_mean[e], " memory length:", len(agent.memory))
+                mean_score = np.mean(scores[-min(100, len(scores)):])
+                mean_scores.append(mean_score)
+
+                print("episode:", e, " score:", score, " q_value:", max_q_mean[e], " memory length:",
+                      len(agent.memory), " | mean score of last 100 episodes: ", mean_score)
 
                 # if the mean of scores of last 100 episodes is bigger than 195
                 # stop training
                 if agent.check_solve:
-                    if np.mean(scores[-min(100, len(scores)):]) >= 195:
+                    if mean_score >= 195:
                         print("solved after", e - 100, "episodes")
-                        plot_data(episodes, scores, max_q_mean[:e + 1], model_name)
+                        plot_data(episodes, scores, max_q_mean[:e + 1], mean_scores, model_name)
                         sys.exit()
 
-    plot_data(episodes, scores, max_q_mean, model_name)
+    plot_data(episodes, scores, max_q_mean, mean_scores, model_name)
     # plot_loss(loss, model_name)
 
 
@@ -291,15 +295,13 @@ def sample_test_states():
 
 
 def net_exp():
-    net_1 = {'input_layer': 64, 'layer_1': 64, 'layer_2': 64, 'layer_3': 64,
-             'layer_4': 64, 'layer_5': 64, 'layer_6': 64}
+    net_1 = {'input_layer': 64, 'layer_1': 64, 'layer_2': 64, 'layer_3': 64}
 
-    net_2 = {'input_layer': 512, 'layer_1': 512}
+    net_2 = {'input_layer': 16, 'layer_1': 16, 'layer_2': 16, 'layer_3': 16, 'layer_4': 16, 'layer_5': 16}
 
-    net_3 = {'input_layer': 64, 'layer_1': 128, 'layer_2': 256, 'layer_3': 512}
+    net_3 = {'input_layer': 256, 'layer_1': 256}
 
-    net_4 = {'input_layer': 16, 'layer_1': 32, 'layer_2': 64, 'layer_3': 128,
-             'layer_4': 64, 'layer_5': 32, 'layer_6': 16}
+    net_4 = {'input_layer': 16, 'layer_1': 32, 'layer_2': 64, 'layer_3': 128}
 
     nets = {
         "net_1": net_1,
@@ -312,9 +314,9 @@ def net_exp():
 
 
 def hyper_exp():
-    d_factors = [0.5, 0.8, 0.9]
-    lrs = [0.01, 0.05, 0.001]
-    mems = [1000, 5000]
+    d_factors = [0.85, 0.95, 0.99]
+    lrs = [0.001, 0.005, 0.01]
+    mems = [100, 1000, 10000]
 
     i = 0
     exp_name = "hyper_exp_"
