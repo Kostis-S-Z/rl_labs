@@ -18,8 +18,19 @@ use_epsilon_policy = False
 
 # Define default parameters of agent
 def_params = {
-    'discount_factor': 0.95,  # Default: 0.95 Optimal: 0.99
-    'learning_rate': 0.005,  # Default: 0.005 Optimal: 0.001
+    'discount_factor': 0.95,
+    'learning_rate': 0.005,
+    'epsilon': 0.02,
+    'batch_size': 32,
+    'memory_size': 1000,
+    'train_start': 1000,
+    'target_update_frequency': 1,
+}
+
+# Optimal parameters of agent
+optimal_params = {
+    'discount_factor': 0.99,
+    'learning_rate': 0.001,
     'epsilon': 0.02,
     'batch_size': 32,
     'memory_size': 1000,
@@ -364,5 +375,9 @@ if __name__ == "__main__":
     # train(def_params, net)
 
     # net_exp()
-    hyper_exp()
+    # hyper_exp()
     # target_update_exp()
+
+    train(optimal_params, net, model_name="optimal")
+    # use_epsilon_policy = True
+    # train(optimal_params, net, model_name="optimal_la")
