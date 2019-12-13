@@ -1,25 +1,25 @@
-import sys
 import gym
 import random
 import numpy as np
 
 from collections import deque
+import tensorflow as tf
 from keras.layers import Dense
 from keras.optimizers import Adam
 from keras.models import Sequential
 from keras.utils import plot_model
 
-from lab_2.utils import *
+from utils import *
 
-EPISODES = 10000  # Maximum number of episodes
+EPISODES = 1000  # Maximum number of episodes
 test_state_no = 10000
 
 use_epsilon_policy = False
 
 # Define default parameters of agent
 def_params = {
-    'discount_factor': 0.95,
-    'learning_rate': 0.005,
+    'discount_factor': 0.95,  # Default: 0.95 Optimal: 0.99
+    'learning_rate': 0.005,  # Default: 0.005 Optimal: 0.001
     'epsilon': 0.02,
     'batch_size': 32,
     'memory_size': 1000,
@@ -30,8 +30,9 @@ def_params = {
 # Define a simple Neural Network Architecture
 net = {
     'input_layer': 16,
-    'layer_1': 16 # ,
-    # 'layer_2': 128
+    'layer_1': 32,
+    'layer_2': 32,
+    'layer_3': 16
 }
 
 # Define linear epsilon decay policy
@@ -41,6 +42,12 @@ e_policy = {
     'per_episode': 50,
     'decay': 0.1
 }
+
+
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if len(gpus) > 0:
+    tf.config.experimental.set_virtual_device_configuration(gpus[0], [
+        tf.config.experimental.VirtualDeviceConfiguration(memory_limit=500)])
 
 
 class DQNAgent:
@@ -264,10 +271,9 @@ def train(params, net_arch, model_name="results", plot_model_figure=False):
                     if mean_score >= 195:
                         print("solved after", e - 100, "episodes")
                         plot_data(episodes, scores, max_q_mean[:e + 1], mean_scores, model_name)
-                        sys.exit()
+                        return
 
     plot_data(episodes, scores, max_q_mean, mean_scores, model_name)
-    # plot_loss(loss, model_name)
 
 
 def sample_test_states():
@@ -295,13 +301,13 @@ def sample_test_states():
 
 
 def net_exp():
-    net_1 = {'input_layer': 64, 'layer_1': 64, 'layer_2': 64, 'layer_3': 64}
+    net_1 = {'input_layer': 8, 'layer_1': 8, 'layer_2': 8, 'layer_3': 8}
 
     net_2 = {'input_layer': 16, 'layer_1': 16, 'layer_2': 16, 'layer_3': 16, 'layer_4': 16, 'layer_5': 16}
 
-    net_3 = {'input_layer': 256, 'layer_1': 256}
+    net_3 = {'input_layer': 128, 'layer_1': 128}
 
-    net_4 = {'input_layer': 16, 'layer_1': 32, 'layer_2': 64, 'layer_3': 128}
+    net_4 = {'input_layer': 16, 'layer_1': 32, 'layer_2': 32, 'layer_3': 16}
 
     nets = {
         "net_1": net_1,
@@ -316,7 +322,7 @@ def net_exp():
 def hyper_exp():
     d_factors = [0.85, 0.95, 0.99]
     lrs = [0.001, 0.005, 0.01]
-    mems = [100, 1000, 10000]
+    mems = [500, 1000, 5000]
 
     i = 0
     exp_name = "hyper_exp_"
@@ -355,8 +361,8 @@ if __name__ == "__main__":
     # Collect test states
     test_states = sample_test_states()
 
-    train(def_params, net)
+    # train(def_params, net)
 
     # net_exp()
-    # hyper_exp()
+    hyper_exp()
     # target_update_exp()

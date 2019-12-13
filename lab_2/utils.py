@@ -1,4 +1,4 @@
-import pylab
+from matplotlib import pylab
 import os
 import json
 
@@ -13,6 +13,7 @@ def plot_data(episodes, scores, max_q_mean, mean_scores, model_name):
     pylab.ylabel("Average Q Value")
     pylab.savefig(model_name + "/q_values.png")
     pylab.show()
+    pylab.close(0)
 
     pylab.figure(1)
     pylab.plot(episodes, scores, 'b')
@@ -20,6 +21,7 @@ def plot_data(episodes, scores, max_q_mean, mean_scores, model_name):
     pylab.ylabel("Score")
     pylab.savefig(model_name + "/scores.png")
     pylab.show()
+    pylab.close(1)
 
     pylab.figure(2)
     pylab.plot(episodes[99:], mean_scores[99:], 'b')
@@ -27,6 +29,7 @@ def plot_data(episodes, scores, max_q_mean, mean_scores, model_name):
     pylab.ylabel("Mean Score of last 100 episodes")
     pylab.savefig(model_name + "/mean_scores.png")
     pylab.show()
+    pylab.close(2)
 
 
 def plot_loss(loss, model_name):
